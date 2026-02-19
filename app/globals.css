@@ -1,0 +1,238 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: var(--font-inter, system-ui, -apple-system, sans-serif);
+  @apply antialiased;
+}
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 100%;
+    --muted-foreground: 0 0% 50%;
+    --accent: 0 0% 94%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 9%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  .dark {
+    --background: 0 0% 8%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 0 0% 96%;
+    --primary-foreground: 0 0% 8%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 0% 96%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Print Styles */
+@media print {
+  /* Set portrait orientation */
+  @page {
+    size: portrait;
+    margin: 1cm;
+  }
+  
+  /* Enable shadows for print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Hide elements not needed for print */
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Reset body styles for print */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+  
+  /* Make sure main content is visible */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* Hide navigation, header, footer */
+  nav, header, footer, .sticky {
+    display: none !important;
+  }
+  
+  /* Hide hidden elements except print-header and print-in-house-container */
+  .hidden:not(.print-header):not(.print-in-house-container) {
+    display: none !important;
+  }
+  
+  /* Show print header */
+  .print-header {
+    display: block !important;
+  }
+  
+  /* Show print-in-house-container in print */
+  .print-in-house-container {
+    display: block !important;
+  }
+  
+  /* Force show desktop table in print within print-in-house-container */
+  .print-in-house-container > div > .hidden {
+    display: block !important;
+  }
+  
+  .print-in-house-container > div > .hidden > table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  
+  .print-in-house-container table tr {
+    display: table-row !important;
+  }
+  
+  .print-in-house-container table td, 
+  .print-in-house-container table th {
+    display: table-cell !important;
+  }
+  
+  /* Hide mobile view in print */
+  .print-in-house-container .sm\:hidden {
+    display: none !important;
+  }
+  
+  /* Show all table elements in print */
+  @media print {
+    .print-in-house-container tbody {
+      display: table-row-group !important;
+    }
+    .print-in-house-container thead {
+      display: table-header-group !important;
+    }
+  }
+  
+  /* Show print-block class in print */
+  .print\:block {
+    display: block !important;
+  }
+  
+  /* Show print-only content */
+  .print-only {
+    display: block !important;
+  }
+  
+  /* Print-friendly tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+  
+  th, td {
+    border-top: 1px solid #e5e7eb !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 8px !important;
+    text-align: left;
+  }
+  
+  th {
+    background-color: #f9fafb !important;
+    font-weight: bold;
+  }
+  
+  /* Page break handling */
+  .page-break {
+    page-break-after: always;
+  }
+  
+  /* Ensure links are visible */
+  a {
+    color: black !important;
+    text-decoration: underline;
+  }
+  
+  /* Hide dark mode in print */
+  .dark {
+    --background: 255 255 255;
+    --foreground: 0 0 0;
+  }
+}
