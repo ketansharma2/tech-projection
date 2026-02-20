@@ -105,7 +105,7 @@ body {
   /* Set portrait orientation */
   @page {
     size: portrait;
-    margin: 1cm;
+    /* margin: 1cm;  */
   }
   
   /* Enable shadows for print */
@@ -138,8 +138,8 @@ body {
     display: none !important;
   }
   
-  /* Hide hidden elements except print-header and print-in-house-container */
-  .hidden:not(.print-header):not(.print-in-house-container) {
+  /* Hide hidden elements except print-header, print-watermark, print-in-house-container, Print-in-house-container, print-bg-only AND print-bg-page */
+  .hidden:not(.print-header):not(.print-watermark):not(.print-in-house-container):not(.Print-in-house-container):not(.print-bg-only):not(.print-bg-page) {
     display: none !important;
   }
   
@@ -148,9 +148,138 @@ body {
     display: block !important;
   }
   
+  /* Show print watermark in print */
+  .print-watermark {
+    display: block !important;
+  }
+  
+  /* Print background image - hidden on screen */
+  .print-bg-only {
+    display: none !important;
+  }
+  
+  /* Print background page - appears as first page with background */
+  .print-bg-page {
+    display: none !important;
+  }
+  
+  @media print {
+    .print-bg-page {
+      display: flex !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      /* Background image is set via inline style in component */
+      background-repeat: no-repeat !important;
+      background-position: center !important;
+      background-size: cover !important;
+      opacity: 0.15 !important;
+      z-index: 0 !important;
+    }
+    
+    /* All content should be above background */
+    .print-in-house-container,
+    .print-header,
+    main,
+    .max-w-7xl {
+      position: relative !important;
+      z-index: 1 !important;
+      background: transparent !important;
+    }
+    
+    /* Make sure header shows on first page above background */
+    .print-header {
+      display: block !important;
+      position: relative !important;
+      background: transparent !important;
+    }
+  }
+  
   /* Show print-in-house-container in print */
   .print-in-house-container {
     display: block !important;
+    background: white !important;
+  }
+  
+  /* Show Print-in-house-container (with capital P) for HOD pages */
+  .Print-in-house-container {
+    display: block !important;
+    background: white !important;
+  }
+  
+  /* Show Print-in-house-container even when it has .hidden class */
+  .Print-in-house-container.hidden {
+    display: block !important;
+  }
+  
+  /* Make all container backgrounds transparent for watermark in HOD print - but preserve inline bg colors for badges */
+  .Print-in-house-container > div,
+  .Print-in-house-container > div > div,
+  .Print-in-house-container section,
+  .Print-in-house-container .space-y-4 {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  /* Preserve inline background styles on child elements (badges) - use initial to keep inline style */
+  .Print-in-house-container span[style*="background"] {
+    background: initial !important;
+  }
+  
+  /* Force show desktop table in print within Print-in-house-container */
+  .Print-in-house-container > div > .hidden {
+    display: block !important;
+  }
+  
+  .Print-in-house-container > div > .hidden > table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  
+  .Print-in-house-container table tr {
+    display: table-row !important;
+  }
+  
+  .Print-in-house-container table td, 
+  .Print-in-house-container table th {
+    display: table-cell !important;
+  }
+  
+  /* Hide mobile view in print */
+  .Print-in-house-container .sm\:hidden {
+    display: none !important;
+  }
+  
+  /* Show all table elements in print */
+  @media print {
+    .Print-in-house-container tbody {
+      display: table-row-group !important;
+    }
+    .Print-in-house-container thead {
+      display: table-header-group !important;
+    }
+  }
+  
+  /* Make all container backgrounds transparent for watermark - but preserve inline bg colors for badges */
+  .print-in-house-container > div,
+  .print-in-house-container > div > div,
+  .print-in-house-container section,
+  .print-in-house-container .space-y-4 {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  
+  /* Preserve inline background styles on child elements (badges) - use initial to keep inline style */
+  .print-in-house-container span[style*="background"] {
+    background: initial !important;
+  }
+  
+  .print-in-house-container * {
+    background: transparent !important;
+    background-color: transparent !important;
   }
   
   /* Force show desktop table in print within print-in-house-container */
@@ -205,18 +334,19 @@ body {
     font-size: 10pt;
   }
   
-  th, td {
+  th, td, tr {
     border-top: 1px solid #e5e7eb !important;
     border-bottom: 1px solid #e5e7eb !important;
     border-left: none !important;
     border-right: none !important;
     padding: 8px !important;
     text-align: left;
+    background: transparent !important;
   }
   
   th {
-    background-color: #f9fafb !important;
     font-weight: bold;
+    background: transparent !important;
   }
   
   /* Page break handling */

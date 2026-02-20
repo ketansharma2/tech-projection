@@ -126,15 +126,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build query - filters by assigned_to for regular users, sub_dept = PRODUCTS
+    // Build query - filters by assigned_to for regular users, sub_dept = PRODUCTS, and only In House delivery_mode
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
+      .is('deleted_at', null)
       .ilike('company', company)
       .eq('work_area', 'DEVELOPMENT')
       .eq('sub_dept', 'PRODUCTS')
       .eq('assigned_to', userId)
-      .is('deleted_at', null)
+      .eq('delivery_mode', 'In House')
       .order('created_at', { ascending: true })
 
     if (error) {

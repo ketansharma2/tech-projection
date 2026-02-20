@@ -130,15 +130,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build query - filters by assigned_to for regular users
+    // Build query - filters by assigned_to for regular users, only In House delivery_mode
     let query = supabase
       .from('tasks')
       .select('*')
+      .is('deleted_at', null)
       .ilike('company', company)
       .eq('work_area', workArea)
       .eq('sub_dept', subDept)
-      .eq('assigned_to', userId)  // Filter by assigned_to for user
-      .is('deleted_at', null)
+      .eq('assigned_to', userId)
+      .eq('delivery_mode', 'In House')
 
     // If active_only is true, filter by is_active = true
     if (activeOnly === 'true') {

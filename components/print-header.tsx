@@ -20,7 +20,15 @@ export default function PrintHeader({ title, reportMonth }: PrintHeaderProps) {
     setUserName(user?.name || 'User')
   }, [])
 
-  const firstLetter = userName.charAt(0).toUpperCase()
+  // Determine which background to use based on URL path
+  const getBgSrc = () => {
+    const path = pathname?.toLowerCase() || ''
+    if (path.includes('/mks')) return '/mks-bg.png'
+    if (path.includes('/savvi')) return '/savvi-bg.png'
+    if (path.includes('/profit-pathshala')) return '/profit-pathshala-bg.png'
+    return '/maven-bg.png'
+  }
+  const bgSrc = getBgSrc()
   
   // Determine which logo to use based on URL path
   const getLogoSrc = () => {
@@ -35,36 +43,44 @@ export default function PrintHeader({ title, reportMonth }: PrintHeaderProps) {
   // Return placeholder content during SSR to avoid hydration mismatch
   if (!mounted) {
     return (
-      <div className="hidden print-header w-full">
-        <div className="flex items-center justify-between py-4 w-full">
-          {/* Left: Company Logo */}
-          <div className="flex-1">
-            <img 
-              src="/maven-logo.webp" 
-              alt="Company Logo" 
-              style={{ height: '40px', width: 'auto' }}
-            />
-          </div>
+      <>
+        <div className="hidden print-header w-full">
+          <div className="flex items-center justify-between py-4 w-full">
+            {/* Left: Company Logo */}
+            <div className="flex-1">
+              <img 
+                src="/maven-logo.webp" 
+                alt="Company Logo" 
+                style={{ height: '40px', width: 'auto' }}
+              />
+            </div>
 
-          {/* Center: Page Heading */}
-          <div className="flex-1 text-center">
-            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-            {reportMonth && (
-              <p className="text-xs text-gray-500 mt-0.5">Report Month: {reportMonth}</p>
-            )}
-          </div>
+            {/* Center: Page Heading */}
+            <div className="flex-1 text-center">
+              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+              {reportMonth && (
+                <p className="text-xs text-gray-500 mt-0.5">Report Month: {reportMonth}</p>
+              )}
+            </div>
 
-          {/* Right: User Name */}
-          <div className="flex-1 text-right">
-            <p className="text-lg font-bold text-gray-900">User</p>
+            {/* Right: User Name */}
+            <div className="flex-1 text-right">
+              <p className="text-lg font-bold text-gray-900">User</p>
+            </div>
           </div>
+          {/* Divider with shadow */}
+          <div className="border-b border-gray-200" style={{ boxShadow: '0 1px 3px 0 rgb(128 128 128)', marginBottom: '15px' }}></div>
         </div>
-        {/* Divider with shadow */}
-        <div className="border-b border-gray-200" style={{ boxShadow: '0 1px 3px 0 rgb(128 128 128)', marginBottom: '15px' }}></div>
-      </div>
+
+        {/* Background Page for Print - also needed for SSR */}
+        <div 
+          className="Print-bg-page"
+          style={{ backgroundImage: 'url(/maven-bg.png)' }}
+        />
+      </>
     )
   }
-
+  
   return (
     <>
       {/* Print Header - Only visible during print - Full width, Portrait */}
@@ -95,6 +111,12 @@ export default function PrintHeader({ title, reportMonth }: PrintHeaderProps) {
         {/* Divider with shadow */}
         <div className="border-b border-gray-200" style={{ boxShadow: '0 1px 3px 0 rgb(128 128 128)', marginBottom: '15px' }}></div>
       </div>
+
+      {/* Background Page for Print - Full Page A4 - Shows as first page with background */}
+      <div 
+        className="print-bg-page"
+        style={{ backgroundImage: `url(${bgSrc})` }}
+      />
     </>
   )
 }

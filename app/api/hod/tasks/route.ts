@@ -5,10 +5,13 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// Products Section mapping from database values to UI sectionId
-const productsSectionMapping: Record<string, string> = {
-  'Already Built': 'already-built',
-  'In Progress': 'in-progress',
+// DM Section mapping from database values to UI sectionId
+const dmSectionMapping: Record<string, string> = {
+  'Linked In': 'linkedin',
+  'Social Media': 'social',
+  'SEO On': 'seo-on',
+  'SEO Off': 'seo-off',
+  'Content Writing': 'content',
 }
 
 interface Task {
@@ -54,11 +57,11 @@ interface DBTask {
 }
 
 function transformDBTaskToTask(dbTask: DBTask, sn: number, userNameMap: Record<string, string>): Task {
-  // Handle empty dm_section - default to 'in-progress'
+  // Handle empty dm_section - default to 'linkedin'
   const dmSection = dbTask.dm_section || ''
-  let sectionId = productsSectionMapping[dmSection] || dmSection.toLowerCase().replace(/\s+/g, '-')
+  let sectionId = dmSectionMapping[dmSection] || dmSection.toLowerCase().replace(/\s+/g, '-')
   if (!sectionId) {
-    sectionId = 'in-progress'
+    sectionId = 'linkedin'
   }
   
   // Get user name from the map, fallback to assigned_to if not found
@@ -81,15 +84,18 @@ function transformDBTaskToTask(dbTask: DBTask, sn: number, userNameMap: Record<s
   }
 }
 
-// Admin API - returns all tasks for PRODUCTS sub-dept (no user filter)
+// HOD API - returns all tasks for the company (same as admin for now)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const company = searchParams.get('company')
+    const workArea = searchParams.get('work_area')
+    const subDept = searchParams.get('sub_dept')
+    const monthKey = searchParams.get('month')
 
-    if (!company) {
+    if (!company || !workArea || !subDept) {
       return NextResponse.json(
-        { error: 'Missing required parameter: company' },
+        { error: 'Missing required parameters: company, work_area, sub_dept' },
         { status: 400 }
       )
     }
@@ -110,16 +116,22 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build query - returns all tasks for PRODUCTS sub-dept (admin view)
-    const { data, error } = await supabase
+    // Build query - returns ALL tasks for HOD (no user filtering)
+    let query = supabase
       .from('tasks')
       .select('*')
       .is('deleted_at', null)
       .ilike('company', company)
-      .eq('work_area', 'DEVELOPMENT')
-      .eq('sub_dept', 'PRODUCTS')
+      .eq('work_area', workArea)
+      .eq('sub_dept', subDept)
       .is('deleted_at', null)
-      .order('created_at', { ascending: true })
+
+    // Apply month filter if provided
+    if (monthKey) {
+      query = query.eq('month_key', monthKey)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: true })
 
     if (error) {
       console.error('Error fetching tasks:', error)
@@ -137,11 +149,92 @@ export async function GET(request: NextRequest) {
     const sectionCounts: Record<string, number> = {}
 
     const tasks: Task[] = data.map((dbTask: DBTask) => {
-      sectionCounts[dbTask.dm_section || 'in-progress'] = (sectionCounts[dbTask.dm_section || 'in-progress'] || 0) + 1
-      return transformDBTaskToTask(dbTask, sectionCounts[dbTask.dm_section || 'in-progress'], userNameMap)
+      sectionCounts[dbTask.dm_section || 'linkedin'] = (sectionCounts[dbTask.dm_section || 'linkedin'] || 0) + 1
+      return transformDBTaskToTask(dbTask, sectionCounts[dbTask.dm_section || 'linkedin'], userNameMap)
     })
 
     return NextResponse.json({ tasks })
+  } catch (error) {
+    console.error('Unexpected error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// HOD API - Create a new task
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const {
+      user_id,
+      assigned_to,
+      company,
+      work_area,
+      sub_dept,
+      dm_section,
+      month_key,
+      delivery_mode,
+      title,
+      status,
+      is_active,
+      progress_percent,
+      deadline_date,
+      working_freq,
+      goal_target,
+      remarks
+    } = body
+
+    // Validate required fields
+    if (!title || !company || !work_area || !sub_dept) {
+      return NextResponse.json(
+        { error: 'Title, company, work_area, and sub_dept are required' },
+        { status: 400 }
+      )
+    }
+
+    // Create Supabase client with service role key
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Insert task into tasks table
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        user_id: user_id || null, // who creates the task
+        assigned_to: assigned_to || null,
+        company,
+        work_area,
+        sub_dept,
+        dm_section: dm_section || null,
+        month_key: month_key || null,
+        delivery_mode: delivery_mode || 'In House',
+        title,
+        status: status || 'Not Started',
+        is_active: is_active !== undefined ? is_active : true,
+        progress_percent: progress_percent || 0,
+        deadline_date: deadline_date || null,
+        working_freq: working_freq || null,
+        goal_target: goal_target || null,
+        remarks: remarks || null
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating task:', error)
+      return NextResponse.json(
+        { error: 'Failed to create task', details: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Task created successfully',
+      task: data 
+    }, { status: 201 })
+
   } catch (error) {
     console.error('Unexpected error:', error)
     return NextResponse.json(

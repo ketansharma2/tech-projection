@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 
-// Initialize admin client for server-side operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+interface RouteParams {
+  params: Promise<{
+    taskId: string
+  }>
+}
 
 // Helper function to get only changed fields
 function getChangedFields(oldData: Record<string, unknown>, newData: Record<string, unknown>): { old: Record<string, unknown> | null, new: Record<string, unknown> | null } {
@@ -11,7 +13,7 @@ function getChangedFields(oldData: Record<string, unknown>, newData: Record<stri
   const changedNew: Record<string, unknown> = {}
   
   for (const key of Object.keys(newData)) {
-    if (key === 'updated_at' || key === 'user_id') continue
+    if (key === 'updated_at' || key === 'user_id' || key === 'edited_by_user_id') continue
     
     let oldValue = oldData?.[key]
     let newValue = newData[key]
@@ -45,8 +47,6 @@ async function logTaskActivity(
   oldData: Record<string, unknown> | null,
   newData: Record<string, unknown> | null
 ) {
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
-  
   const { error } = await supabase
     .from('task_activity_log')
     .insert({
@@ -62,148 +62,152 @@ async function logTaskActivity(
   }
 }
 
-// PUT - Update a specific task
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ taskId: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const { taskId } = await params
+  
   try {
-    // Create Supabase client with service role key for server-side operations
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const { taskId } = await params
-    
     const body = await request.json()
-    const { 
-      user_id, // User's ID from auth (who is making the edit)
-      status, 
-      progress_percent, 
-      remarks, 
-      links 
+    const {
+      user_id, // Also accept user_id from frontend
+      edited_by_user_id,
+      title,
+      doer_id,
+      status,
+      deadline_date,
+      working_freq,
+      goal_target,
+      progress_percent,
+      remarks,
+      links,
     } = body
+
+    // Build update object
+    const updateData: Record<string, unknown> = {}
     
+    if (title !== undefined) updateData.title = title
+    if (doer_id !== undefined) updateData.assigned_to = doer_id
+    if (status !== undefined) updateData.status = status
+    if (deadline_date !== undefined) updateData.deadline_date = deadline_date
+    if (working_freq !== undefined) updateData.working_freq = working_freq
+    if (goal_target !== undefined) updateData.goal_target = goal_target
+    if (progress_percent !== undefined) updateData.progress_percent = progress_percent
+    if (remarks !== undefined) updateData.remarks = remarks
+    if (links !== undefined) updateData.links = JSON.stringify(links)
+    
+    updateData.updated_at = new Date().toISOString()
+
+    // Use either user_id or edited_by_user_id
+    const userId = user_id || edited_by_user_id
+
     // Get old task data before update
     const { data: oldTask } = await supabase
       .from('tasks')
       .select('*')
       .eq('task_id', taskId)
       .single()
-    
-    // Build update object
-    const updateData: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    }
-    
-    if (status !== undefined) {
-      updateData.status = status
-    }
-    
-    if (progress_percent !== undefined) {
-      updateData.progress_percent = progress_percent
-    }
-    
-    if (remarks !== undefined) {
-      updateData.remarks = remarks
-    }
-    
-    if (links !== undefined) {
-      // If links is a string (JSON stringified), parse it; otherwise use as-is
-      try {
-        const parsedLinks = typeof links === 'string' ? JSON.parse(links) : links
-        updateData.links = parsedLinks
-      } catch (e) {
-        updateData.links = links
-      }
-    }
-    
+
     const { data, error } = await supabase
       .from('tasks')
       .update(updateData)
       .eq('task_id', taskId)
       .select()
       .single()
-    
+
     if (error) {
-      console.error('Error updating task:', error)
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
-    
+
     // Log activity if user_id provided
-    if (user_id && oldTask) {
+    if (userId && oldTask) {
       // Get only the changed fields
       const { old: changedOld, new: changedNew } = getChangedFields(oldTask, updateData)
       
       await logTaskActivity(
         taskId,
-        user_id,
+        userId,
         'Edit',
         changedOld,
         changedNew
       )
     }
-    
-    return NextResponse.json({ task: data, message: 'Task updated successfully' })
+
+    return NextResponse.json({ success: true, task: data })
   } catch (error) {
-    console.error('Unexpected error:', error)
+    console.error('Error updating task:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to update task' },
       { status: 500 }
     )
   }
 }
 
-// DELETE - Delete a specific task
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ taskId: string }> }
-) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  const { taskId } = await params
+  
   try {
-    // Create Supabase client with service role key for server-side operations
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const { taskId } = await params
-    
-    // Get user_id from request body
-    const body = await request.json().catch(() => ({}))
-    const user_id = body.user_id
-    
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('task_id', taskId)
+      .single()
+
+    if (error) {
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ task: data })
+  } catch (error) {
+    console.error('Error fetching task:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch task' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const { taskId } = await params
+  
+  try {
     // Get old task data before delete
     const { data: oldTask } = await supabase
       .from('tasks')
       .select('*')
       .eq('task_id', taskId)
       .single()
-    
+
+    // Get user_id from request body (accept both user_id and edited_by_user_id)
+    const body = await request.json().catch(() => ({}))
+    const editedByUserId = body.user_id || body.edited_by_user_id
+
     const { error } = await supabase
       .from('tasks')
       .update({ deleted_at: new Date().toISOString() })
       .eq('task_id', taskId)
-    
+
     if (error) {
-      console.error('Error deleting task:', error)
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
+      console.error('Supabase error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
-    
+
     // Log activity if user_id provided
-    if (user_id) {
+    if (editedByUserId) {
       await logTaskActivity(
         taskId,
-        user_id,
+        editedByUserId,
         'Delete',
         oldTask || null,
         null
       )
     }
-    
-    return NextResponse.json({ success: true, message: 'Task deleted successfully' })
+
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Unexpected error:', error)
+    console.error('Error deleting task:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to delete task' },
       { status: 500 }
     )
   }

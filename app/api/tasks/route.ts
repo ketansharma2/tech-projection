@@ -118,6 +118,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('tasks')
       .select('*')
+      .is('deleted_at', null)
       .ilike('company', company)
       .eq('work_area', workArea)
       .eq('sub_dept', subDept)

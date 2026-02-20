@@ -133,7 +133,7 @@ export default function UserDMPage() {
         {/* Print-only In House Container */}
         <div className="hidden print-in-house-container mb-6" style={{ maxWidth: '100%', width: '100%' }}>
           <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">In House</h2>
-          <div className="space-y-4" style={{ padding: '16px', backgroundColor: '#ffffff' }}>
+          <div className="space-y-4" style={{ padding: '16px' }}>
             {/* Stats Cards - Inside container */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
               <div style={{ padding: '8px', borderRadius: '6px', backgroundColor: '#dbeafe', border: '1px solid #93c5fd', textAlign: 'center' }}>
@@ -172,7 +172,7 @@ export default function UserDMPage() {
                     <div style={{ borderTop: '1px solid #e5e7eb' }}>
                       <table className="w-full text-sm" style={{ display: 'table', width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
                         <thead>
-                          <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb' }}>
+                          <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
                             <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600, fontSize: '9px', color: '#374151', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Sn</th>
                             <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600, fontSize: '9px', color: '#374151', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Project/Task Title</th>
                             <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600, fontSize: '9px', color: '#374151', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Status</th>
@@ -196,7 +196,7 @@ export default function UserDMPage() {
                             };
                             const statusStyle = statusColors[task.status] || { bg: '#f3f4f6', text: '#1f2937' };
                             return (
-                              <tr key={task.id} style={{ borderBottom: '1px solid #f3f4f6', backgroundColor: '#ffffff' }}>
+                              <tr key={task.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                 <td style={{ padding: '8px', color: textColor, fontWeight: 500, fontSize: '10px', whiteSpace: 'nowrap' }}>{task.sn}</td>
                                 <td style={{ padding: '8px', color: textColor, fontWeight: 500, fontSize: '10px' }}>{task.title}</td>
                                 <td style={{ padding: '8px' }}>

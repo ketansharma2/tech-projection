@@ -1,6 +1,6 @@
 import AppHeader from '@/components/header'
 
-export default async function UserLayout({
+export default async function HodLayout({
   children,
   params,
 }: {
@@ -12,7 +12,7 @@ export default async function UserLayout({
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <AppHeader companySlug={companySlug} variant="user" />
+      <AppHeader companySlug={companySlug} variant="hod" />
 
       {/* Content */}
       {children}

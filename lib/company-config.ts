@@ -7,6 +7,12 @@ export interface CompanyTheme {
   headingColor: string
   logoUrl: string
   gradient?: string
+  logoBackground?: string
+  logoInitials?: string
+  switcherName?: string
+  domain?: string
+  tagline?: string
+  techDescription?: string
 }
 
 export const companyThemeConfig: Record<CompanySlug, CompanyTheme> = {
@@ -16,6 +22,12 @@ export const companyThemeConfig: Record<CompanySlug, CompanyTheme> = {
     primaryColor: '#103c7f',
     headingColor: '#103c7f',
     logoUrl: 'https://via.placeholder.com/32?text=M',
+    logoBackground: '#103c7f',
+    logoInitials: 'M',
+    switcherName: 'Maven Jobs',
+    domain: 'maven.jobs',
+    tagline: 'Leading recruitment and staffing solutions',
+    techDescription: 'Data-driven recruitment technology, automation pipelines, and candidate management systems',
   },
   mks: {
     name: 'MKS',
@@ -23,6 +35,12 @@ export const companyThemeConfig: Record<CompanySlug, CompanyTheme> = {
     primaryColor: '#6366f1',
     headingColor: '#4f46e5',
     logoUrl: 'https://via.placeholder.com/32?text=MK',
+    logoBackground: '#6366f1',
+    logoInitials: 'MK',
+    switcherName: 'MKS',
+    domain: 'mks.work',
+    tagline: 'Digital transformation and IT services',
+    techDescription: 'Comprehensive tech solutions including software development, cloud infrastructure, and digital marketing',
   },
   savvi: {
     name: 'Savvi',
@@ -30,6 +48,12 @@ export const companyThemeConfig: Record<CompanySlug, CompanyTheme> = {
     primaryColor: '#ec4899',
     headingColor: '#be185d',
     logoUrl: 'https://via.placeholder.com/32?text=S',
+    logoBackground: '#ec4899',
+    logoInitials: 'S',
+    switcherName: 'Savvi',
+    domain: 'savvi.ai',
+    tagline: 'AI-powered business solutions',
+    techDescription: 'Cutting-edge AI and machine learning solutions for business automation and growth',
   },
   'profit-pathshala': {
     name: 'Profit Pathshala',
@@ -37,6 +61,12 @@ export const companyThemeConfig: Record<CompanySlug, CompanyTheme> = {
     primaryColor: '#d97706',
     headingColor: '#1f2937',
     logoUrl: 'https://via.placeholder.com/32?text=PP',
+    logoBackground: '#d97706',
+    logoInitials: 'PP',
+    switcherName: 'Profit Pathshala',
+    domain: 'profitpathshala.com',
+    tagline: 'E-commerce and digital education platform',
+    techDescription: 'E-commerce solutions combined with digital education and skill development platforms',
   },
 }
 

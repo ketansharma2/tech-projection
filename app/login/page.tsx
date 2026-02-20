@@ -71,10 +71,17 @@ export default function LoginPage() {
       const company = (data.user!.company || 'maven').toLowerCase()
       const userRole = data.user!.role
       
-      // If role is 'User', redirect to user folder, otherwise to admin folder
-      const redirectPath = userRole === 'User' 
-        ? `/user/${company}/development` 
-        : `/admin/${company}/development`
+      // If role is 'User', redirect to user folder
+      // If role is 'HOD', redirect to hod folder
+      // Otherwise (Admin, etc.), redirect to hod folder
+      let redirectPath: string
+      if (userRole === 'User') {
+        redirectPath = `/user/${company}`
+      } else if (userRole === 'HOD') {
+        redirectPath = `/hod/${company}/development`
+      } else {
+        redirectPath = `/hod/${company}/development`
+      }
       
       // Use window.location for more reliable redirect
       window.location.href = redirectPath

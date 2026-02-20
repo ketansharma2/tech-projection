@@ -6,18 +6,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { username, password, email, role, company, name, is_active } = body
 
-    // Validate required fields
-    if (!password || !email || !name || is_active === undefined) {
+    // Validate required fields - only password, email, name are required
+    if (!password || !email || !name) {
       return NextResponse.json(
-        { error: 'Missing required fields: password, email, name, is_active' },
-        { status: 400 }
-      )
-    }
-
-    // Validate is_active must be 'Yes' or 'No'
-    if (is_active !== 'Yes' && is_active !== 'No') {
-      return NextResponse.json(
-        { error: 'is_active must be "Yes" or "No"' },
+        { error: 'Missing required fields: password, email, name' },
         { status: 400 }
       )
     }
@@ -40,6 +32,12 @@ export async function POST(request: NextRequest) {
     // Get the user ID from Supabase Auth
     const userId = authData.user.id
 
+    // Set defaults for optional fields
+    const userRole = role || 'User'
+    const userCompany = company || null
+    // Default to active (true) if not specified, otherwise use the provided value
+    const userActive = is_active === undefined || is_active === 'Yes' || is_active === true
+
     // Insert user into users table
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
@@ -47,9 +45,9 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         name: name,
         email: email,
-        role: role || 'user',
-        company: company || null,
-        is_active: is_active === 'Yes'
+        role: userRole,
+        company: userCompany,
+        is_active: userActive
       })
       .select()
       .single()

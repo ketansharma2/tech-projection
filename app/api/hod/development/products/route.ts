@@ -7,8 +7,8 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 // Products Section mapping from database values to UI sectionId
 const productsSectionMapping: Record<string, string> = {
-  'Already Built': 'already-built',
-  'In Progress': 'in-progress',
+  'In Progress': 'developing',
+  'Already Built': 'developed',
 }
 
 interface Task {
@@ -54,11 +54,11 @@ interface DBTask {
 }
 
 function transformDBTaskToTask(dbTask: DBTask, sn: number, userNameMap: Record<string, string>): Task {
-  // Handle empty dm_section - default to 'in-progress'
+  // Handle empty dm_section - default to 'developing'
   const dmSection = dbTask.dm_section || ''
   let sectionId = productsSectionMapping[dmSection] || dmSection.toLowerCase().replace(/\s+/g, '-')
   if (!sectionId) {
-    sectionId = 'in-progress'
+    sectionId = 'developing'
   }
   
   // Get user name from the map, fallback to assigned_to if not found
@@ -81,11 +81,12 @@ function transformDBTaskToTask(dbTask: DBTask, sn: number, userNameMap: Record<s
   }
 }
 
-// Admin API - returns all tasks for PRODUCTS sub-dept (no user filter)
+// HOD API - returns all tasks for PRODUCTS sub-dept (no user filter)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const company = searchParams.get('company')
+    const monthKey = searchParams.get('month')
 
     if (!company) {
       return NextResponse.json(
@@ -110,8 +111,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build query - returns all tasks for PRODUCTS sub-dept (admin view)
-    const { data, error } = await supabase
+    // Build query - returns all tasks for PRODUCTS sub-dept (HOD view)
+    let query = supabase
       .from('tasks')
       .select('*')
       .is('deleted_at', null)
@@ -119,7 +120,13 @@ export async function GET(request: NextRequest) {
       .eq('work_area', 'DEVELOPMENT')
       .eq('sub_dept', 'PRODUCTS')
       .is('deleted_at', null)
-      .order('created_at', { ascending: true })
+
+    // Apply month filter if provided
+    if (monthKey) {
+      query = query.eq('month_key', monthKey)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: true })
 
     if (error) {
       console.error('Error fetching tasks:', error)
@@ -137,8 +144,8 @@ export async function GET(request: NextRequest) {
     const sectionCounts: Record<string, number> = {}
 
     const tasks: Task[] = data.map((dbTask: DBTask) => {
-      sectionCounts[dbTask.dm_section || 'in-progress'] = (sectionCounts[dbTask.dm_section || 'in-progress'] || 0) + 1
-      return transformDBTaskToTask(dbTask, sectionCounts[dbTask.dm_section || 'in-progress'], userNameMap)
+      sectionCounts[dbTask.dm_section || 'developing'] = (sectionCounts[dbTask.dm_section || 'developing'] || 0) + 1
+      return transformDBTaskToTask(dbTask, sectionCounts[dbTask.dm_section || 'developing'], userNameMap)
     })
 
     return NextResponse.json({ tasks })

@@ -5,10 +5,10 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// Products Section mapping from database values to UI sectionId
-const productsSectionMapping: Record<string, string> = {
-  'Already Built': 'already-built',
-  'In Progress': 'in-progress',
+// Data Section mapping from database values to UI sectionId
+const dataSectionMapping: Record<string, string> = {
+  'Data Management': 'data-management',
+  'Data Security': 'data-security',
 }
 
 interface Task {
@@ -54,11 +54,11 @@ interface DBTask {
 }
 
 function transformDBTaskToTask(dbTask: DBTask, sn: number, userNameMap: Record<string, string>): Task {
-  // Handle empty dm_section - default to 'in-progress'
+  // Handle empty dm_section - default to 'data-management'
   const dmSection = dbTask.dm_section || ''
-  let sectionId = productsSectionMapping[dmSection] || dmSection.toLowerCase().replace(/\s+/g, '-')
+  let sectionId = dataSectionMapping[dmSection] || dmSection.toLowerCase().replace(/\s+/g, '-')
   if (!sectionId) {
-    sectionId = 'in-progress'
+    sectionId = 'data-management'
   }
   
   // Get user name from the map, fallback to assigned_to if not found
@@ -81,11 +81,12 @@ function transformDBTaskToTask(dbTask: DBTask, sn: number, userNameMap: Record<s
   }
 }
 
-// Admin API - returns all tasks for PRODUCTS sub-dept (no user filter)
+// HOD API - returns all tasks for DATA sub-dept (no user filter)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const company = searchParams.get('company')
+    const monthKey = searchParams.get('month')
 
     if (!company) {
       return NextResponse.json(
@@ -110,16 +111,22 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build query - returns all tasks for PRODUCTS sub-dept (admin view)
-    const { data, error } = await supabase
+    // Build query - returns all tasks for DATA sub-dept (HOD view)
+    let query = supabase
       .from('tasks')
       .select('*')
       .is('deleted_at', null)
       .ilike('company', company)
       .eq('work_area', 'DEVELOPMENT')
-      .eq('sub_dept', 'PRODUCTS')
+      .eq('sub_dept', 'DATA')
       .is('deleted_at', null)
-      .order('created_at', { ascending: true })
+
+    // Apply month filter if provided
+    if (monthKey) {
+      query = query.eq('month_key', monthKey)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: true })
 
     if (error) {
       console.error('Error fetching tasks:', error)
@@ -137,8 +144,8 @@ export async function GET(request: NextRequest) {
     const sectionCounts: Record<string, number> = {}
 
     const tasks: Task[] = data.map((dbTask: DBTask) => {
-      sectionCounts[dbTask.dm_section || 'in-progress'] = (sectionCounts[dbTask.dm_section || 'in-progress'] || 0) + 1
-      return transformDBTaskToTask(dbTask, sectionCounts[dbTask.dm_section || 'in-progress'], userNameMap)
+      sectionCounts[dbTask.dm_section || 'data-management'] = (sectionCounts[dbTask.dm_section || 'data-management'] || 0) + 1
+      return transformDBTaskToTask(dbTask, sectionCounts[dbTask.dm_section || 'data-management'], userNameMap)
     })
 
     return NextResponse.json({ tasks })

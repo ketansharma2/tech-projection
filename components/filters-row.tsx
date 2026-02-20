@@ -11,6 +11,7 @@ interface FiltersRowProps {
   onStatusChange: (status: string | null) => void
   selectedDoer?: string | null
   onDoerChange?: (doer: string | null) => void
+  doers?: string[]
   activeOnly: boolean
   onActiveOnlyChange: (active: boolean) => void
   selectedMonth?: string
@@ -30,6 +31,7 @@ export default function FiltersRow({
   onStatusChange,
   selectedDoer,
   onDoerChange,
+  doers,
   activeOnly,
   onActiveOnlyChange,
   selectedMonth,
@@ -144,7 +146,22 @@ export default function FiltersRow({
               >
                 All Doers
               </button>
-              {teamMembers.map((doer) => (
+              {doers ? doers.map((doer) => (
+                <button
+                  key={doer}
+                  onClick={() => {
+                    onDoerChange(doer)
+                    setDoerOpen(false)
+                  }}
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                    selectedDoer === doer
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-secondary'
+                  }`}
+                >
+                  {doer}
+                </button>
+              )) : teamMembers.map((doer) => (
                 <button
                   key={doer}
                   onClick={() => {
