@@ -422,9 +422,9 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                             </div>
 
                             {/* Role toggle — only in HOD variant */}
-                            {variant === 'hod' && (
+                            {/* variant === 'hod' && (
                                 <RoleToggle value={role} onChange={setRole} />
-                            )}
+                            )} */}
 
                             {/* User selector — only in HOD mode */}
                             {variant === 'hod' && isHOD && users.length > 0 && (
@@ -481,14 +481,6 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
 
                         {/* Navigation links */}
                         <nav className="px-3 py-2">
-                            {/* My View button — only in HOD variant */}
-                            {variant === 'hod' && (
-                                <button className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900">
-                                    <UserIcon className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
-                                    <span className="text-sm font-medium">My View</span>
-                                </button>
-                            )}
-
                             {variant === 'hod' && (
                                 <>
                                     <Link

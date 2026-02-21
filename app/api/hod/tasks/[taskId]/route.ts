@@ -85,13 +85,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const updateData: Record<string, unknown> = {}
     
     if (title !== undefined) updateData.title = title
-    if (doer_id !== undefined) updateData.assigned_to = doer_id
+    // Only update assigned_to if it's a valid UUID (not empty string)
+    if (doer_id !== undefined && doer_id !== '') updateData.assigned_to = doer_id
     if (status !== undefined) updateData.status = status
-    if (deadline_date !== undefined) updateData.deadline_date = deadline_date
-    if (working_freq !== undefined) updateData.working_freq = working_freq
-    if (goal_target !== undefined) updateData.goal_target = goal_target
+    if (deadline_date !== undefined) updateData.deadline_date = deadline_date || null
+    if (working_freq !== undefined) updateData.working_freq = working_freq || null
+    if (goal_target !== undefined) updateData.goal_target = goal_target || null
     if (progress_percent !== undefined) updateData.progress_percent = progress_percent
-    if (remarks !== undefined) updateData.remarks = remarks
+    if (remarks !== undefined) updateData.remarks = remarks || null
     if (links !== undefined) updateData.links = JSON.stringify(links)
     
     updateData.updated_at = new Date().toISOString()

@@ -148,7 +148,7 @@ export default function DevelopmentPage({
         },
         outsourcing: {
           id: 'data-outsourcing',
-          title: 'Outsourcing',
+          title: 'Out Sourcing',
           icon: Globe,
           status: 'Active',
           items: [
@@ -176,7 +176,7 @@ export default function DevelopmentPage({
         },
         outsourcing: {
           id: 'dm-outsourcing',
-          title: 'Outsourcing',
+          title: 'Out Sourcing',
           icon: Globe,
           status: 'Active',
           items: [
@@ -200,7 +200,7 @@ export default function DevelopmentPage({
         },
         outsourcing: {
           id: 'products-outsourcing',
-          title: 'Outsourcing',
+          title: 'Out Sourcing',
           icon: Globe,
           status: 'Active',
           items: [

@@ -2,6 +2,7 @@ import { Printer, Building2, User } from 'lucide-react'
 import { getUser } from '@/lib/auth'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
+import { getCompanyTheme, type CompanySlug } from '@/lib/company-config'
 
 interface PrintHeaderProps {
   title: string
@@ -10,6 +11,7 @@ interface PrintHeaderProps {
 
 export default function PrintHeader({ title, reportMonth }: PrintHeaderProps) {
   const [userName, setUserName] = useState('User')
+  const [profileUrl, setProfileUrl] = useState('')
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
 
@@ -18,7 +20,22 @@ export default function PrintHeader({ title, reportMonth }: PrintHeaderProps) {
     // Get user info on client side
     const user = getUser()
     setUserName(user?.name || 'User')
+    setProfileUrl(user?.profile_url || '')
   }, [])
+
+  // Get company from pathname
+  const getCompanySlug = (): CompanySlug => {
+    const path = pathname?.toLowerCase() || ''
+    if (path.includes('/mks')) return 'mks'
+    if (path.includes('/savvi')) return 'savvi'
+    if (path.includes('/profit-pathshala')) return 'profit-pathshala'
+    return 'maven'
+  }
+  const companySlug = getCompanySlug()
+  const theme = getCompanyTheme(companySlug)
+  
+  // Generate initials from user name
+  const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   // Determine which background to use based on URL path
   const getBgSrc = () => {
@@ -39,7 +56,7 @@ export default function PrintHeader({ title, reportMonth }: PrintHeaderProps) {
     return '/maven-logo.webp'
   }
   const logoSrc = getLogoSrc()
-   
+    
   // Return placeholder content during SSR to avoid hydration mismatch
   if (!mounted) {
     return (
@@ -63,8 +80,14 @@ export default function PrintHeader({ title, reportMonth }: PrintHeaderProps) {
               )}
             </div>
 
-            {/* Right: User Name */}
-            <div className="flex-1 text-right">
+            {/* Right: User Profile with Avatar */}
+            <div className="flex-1 text-right flex items-center justify-end gap-2">
+              <div 
+                className="flex items-center justify-center rounded-full text-white font-bold overflow-hidden"
+                style={{ width: '32px', height: '32px', fontSize: '12px', backgroundColor: '#103c7f' }}
+              >
+                U
+              </div>
               <p className="text-lg font-bold text-gray-900">User</p>
             </div>
           </div>
@@ -103,8 +126,23 @@ export default function PrintHeader({ title, reportMonth }: PrintHeaderProps) {
             )}
           </div>
 
-          {/* Right: User Name */}
-          <div className="flex-1 text-right">
+          {/* Right: User Profile with Avatar */}
+          <div className="flex-1 text-right flex items-center justify-end gap-2">
+            {profileUrl ? (
+              <img 
+                src={profileUrl} 
+                alt={userName}
+                className="rounded-full object-cover"
+                style={{ width: '32px', height: '32px' }}
+              />
+            ) : (
+              <div 
+                className="flex items-center justify-center rounded-full text-white font-bold"
+                style={{ width: '32px', height: '32px', fontSize: '12px', backgroundColor: theme.primaryColor }}
+              >
+                {initials}
+              </div>
+            )}
             <p className="text-lg font-bold text-gray-900">{userName}</p>
           </div>
         </div>

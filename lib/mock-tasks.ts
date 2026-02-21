@@ -6,9 +6,9 @@ import { type CompanySlug } from './company-config'
 
 export type ProjectionMode = 'development' | 'operations'
 export type ProjectionHead = 'dm' | 'data' | 'products'
-export type DMSection = 'LinkedIn' | 'Social Media' | 'SEO On Page' | 'SEO Off Page' | 'Content Writing'
+export type DMSection = 'Linked In' | 'Social Media' | 'SEO On Page' | 'SEO Off Page' | 'Content Writing' | 'Data Management' | 'Data Security' | 'Developing' | 'Developed'
 export type WorkType = 'in-house' | 'outsourcing'
-export type TaskStatus = 'Not Started' | 'In Progress' | 'Completed' | 'On Hold'
+export type TaskStatus = 'Not Started' | 'In Progress' | 'Done' | 'Delegated' | 'On Hold'
 export type WorkingFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'As Per Req'
 
 export interface NewProjectionTaskInput {

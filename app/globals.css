@@ -148,6 +148,15 @@ body {
     display: block !important;
   }
   
+  /* Make main content transparent so print header shows */
+  main {
+    background: transparent !important;
+  }
+  
+  .max-w-7xl {
+    background: transparent !important;
+  }
+  
   /* Show print watermark in print */
   .print-watermark {
     display: block !important;
@@ -200,13 +209,13 @@ body {
   /* Show print-in-house-container in print */
   .print-in-house-container {
     display: block !important;
-    background: white !important;
+    background: transparent !important;
   }
   
   /* Show Print-in-house-container (with capital P) for HOD pages */
   .Print-in-house-container {
     display: block !important;
-    background: white !important;
+    background: transparent !important;
   }
   
   /* Show Print-in-house-container even when it has .hidden class */
