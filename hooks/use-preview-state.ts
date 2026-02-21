@@ -8,6 +8,7 @@ interface UserInfo {
   name: string
   position: string
   email: string
+  profile_url?: string
 }
 
 interface PreviewState {
@@ -39,6 +40,7 @@ export function usePreviewState(): PreviewState {
             name: u.name || 'Unknown',
             position: u.position || 'Team Member',
             email: u.email || '',
+            profile_url: u.profile_url || '',
           }))
           setUsers(formattedUsers)
           

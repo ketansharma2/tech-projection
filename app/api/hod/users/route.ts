@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('users')
-      .select('user_id, name, email, role, is_active, company, profile_url, created_at')
+      .select('user_id, name, email, role, is_active, company, profile_url, created_at, designation')
       .order('created_at', { ascending: false })
 
     // Filter by company if provided
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || ''
 
-    let email: string, password: string, name: string, role: string, company: string, isActive: boolean, file: File | null
+    let email: string, password: string, name: string, designation: string, role: string, company: string, isActive: string, file: File | null
 
     // Check if request is FormData (with file) or JSON
     if (contentType.includes('multipart/form-data')) {
@@ -58,18 +58,20 @@ export async function POST(request: NextRequest) {
       email = formData.get('email') as string
       password = formData.get('password') as string
       name = formData.get('name') as string
-      role = formData.get('role') as string || 'user'
+      designation = formData.get('designation') as string
+      role = formData.get('role') as string || 'User'
       company = formData.get('company') as string || ''
-      isActive = formData.get('is_active') === 'true'
+      isActive = formData.get('is_active') as string || 'Yes'
       file = formData.get('file') as File | null
     } else {
       const body = await request.json()
       email = body.email
       password = body.password
       name = body.name
-      role = body.role || 'user'
+      designation = body.designation || ''
+      role = body.role || 'User'
       company = body.company || ''
-      isActive = body.is_active !== undefined ? body.is_active : true
+      isActive = body.is_active !== undefined ? body.is_active : 'Yes'
       file = null
     }
 
@@ -120,8 +122,8 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await file.arrayBuffer()
         const buffer = new Uint8Array(arrayBuffer)
 
-        // Generate unique file name
-        const fileName = `${userId}/${Date.now()}-${file.name}`
+        // Generate unique file name - store directly in bucket without folder
+        const fileName = `${Date.now()}-${file.name}`
 
         // Upload to Supabase storage bucket
         const { error: uploadError } = await supabase.storage
@@ -151,6 +153,7 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         name,
         email,
+        designation: designation || null,
         role,
         is_active: isActive,
         company: company || null,
@@ -165,7 +168,11 @@ export async function POST(request: NextRequest) {
       await supabase.auth.admin.deleteUser(userId)
       // Try to delete uploaded file
       if (profileUrl) {
-        await supabase.storage.from('profile_pictures').remove([`${userId}/`])
+        // Extract the filename from the URL and delete it
+        const fileName = profileUrl.split('/').pop()
+        if (fileName) {
+          await supabase.storage.from('profile_pictures').remove([fileName])
+        }
       }
       return NextResponse.json(
         { error: 'Failed to create user record', details: userError.message },

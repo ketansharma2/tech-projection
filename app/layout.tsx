@@ -7,9 +7,12 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata: Metadata = {
-  title: 'v0 App',
+  title: 'Tech Projection',
   description: 'Created with v0',
   generator: 'v0.app',
+  icons: {
+    icon: '/Maven Jobs Favicon.svg',
+  },
 }
 
 export default function RootLayout({

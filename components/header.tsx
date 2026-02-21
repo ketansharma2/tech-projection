@@ -3,8 +3,7 @@
 import * as React from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import {
-    ChevronDown,
+import { ChevronDown,
     Check,
     Monitor,
     Package,
@@ -12,7 +11,7 @@ import {
     Database,
     Users,
     Settings,
-    User,
+    User as UserIcon,
     LogOut,
 } from 'lucide-react'
 import {
@@ -22,11 +21,11 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { allCompanies, getCompanyTheme, type CompanyTheme } from '@/lib/company-config'
 import { usePreviewState } from '@/hooks/use-preview-state'
-import { logout, getUser } from '@/lib/auth'
+import { logout, getUser, type User as AuthUser } from '@/lib/auth'
 
 // ─────────────────────────────────────────────
 // Types
@@ -55,21 +54,16 @@ function deriveState(pathname: string): { mode: Mode; head: Head | null } {
 // Company Logo
 // ─────────────────────────────────────────────
 function CompanyLogo({ theme, size = 40 }: { theme: CompanyTheme; size?: number }) {
-    const isGrad = theme.logoBackground?.startsWith('linear')
     return (
-        <span
-            className="inline-flex items-center justify-center rounded-xl font-bold text-white select-none flex-shrink-0"
+        <img
+            src={theme.logoUrl}
+            alt={theme.name}
+            className="rounded-xl object-contain"
             style={{
                 width: size,
                 height: size,
-                fontSize: Math.round(size * 0.35),
-                background: isGrad ? theme.logoBackground : undefined,
-                backgroundColor: !isGrad ? theme.logoBackground : undefined,
-                letterSpacing: '-0.02em',
             }}
-        >
-            {theme.logoInitials}
-        </span>
+        />
     )
 }
 
@@ -185,13 +179,26 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
     // Use the project-wide preview state
     const { role, selectedUserId, users, selectedUser, setRole, setSelectedUserId } = usePreviewState()
     const isHOD = role === 'HOD'
-
+    
+    // Get logged in user from localStorage after hydration to avoid mismatch
+    const [loggedInUser, setLoggedInUser] = React.useState<AuthUser | null>(null)
+    
+    React.useEffect(() => {
+        setLoggedInUser(getUser())
+    }, [])
+    
     // Display based on role - use defaults to avoid SSR mismatch
-    const displayName = (isHOD && selectedUser?.name) ? selectedUser.name : 'User'
+    // Use selectedUser in HOD mode, otherwise use loggedInUser (from auth)
+    const displayName = (isHOD && selectedUser?.name) ? selectedUser.name : (loggedInUser?.name || 'User')
     const displayRole = isHOD 
         ? (selectedUser?.position || 'Head of Department')
-        : 'Team Member'
-    const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+        : (loggedInUser?.role || 'Team Member')
+    const displayProfileUrl = isHOD ? selectedUser?.profile_url : loggedInUser?.profile_url
+    const displayDesignation = isHOD ? '' : (loggedInUser?.designation || '')
+    const displayEmail = isHOD ? '' : (loggedInUser?.email || '')
+    // Get company name from user data
+    const displayCompany = loggedInUser?.company || ''
+    const initials = displayName.charAt(0).toUpperCase()
 
     // Get the path prefix (user/hod) from current URL
     const getPathPrefix = () => {
@@ -245,9 +252,9 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
             style={{ height: 72 }}
         >
             {/* LEFT: Company logo + switcher chevron */}
-            <div className="flex items-center gap-1">
-                <Link href={`/${companySlug}`} className="flex-shrink-0 focus:outline-none">
-                    <CompanyLogo theme={theme} size={42} />
+            <div className="flex items-center gap-2">
+                <Link href={`/${variant}/${companySlug}`} className="flex-shrink-0 focus:outline-none">
+                    <CompanyLogo theme={theme} size={65} />
                 </Link>
 
                 <DropdownMenu>
@@ -272,7 +279,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                                     className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 transition-colors group
                     ${active ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}`}
                                 >
-                                    <CompanyLogo theme={c} size={32} />
+                                    <CompanyLogo theme={c} size={40} />
                                     <span className="min-w-0 flex-1">
                                         <span className="block truncate text-sm font-medium leading-tight">{c.name}</span>
                                         {c.domain && (
@@ -360,7 +367,14 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                 <Popover>
                     <PopoverTrigger asChild>
                         <button className="group inline-flex items-center gap-2.5 rounded-xl py-1.5 pl-2 pr-3 transition-all hover:bg-slate-50 focus:outline-none">
-                            <Avatar className="h-8 w-8 flex-shrink-0">
+                            <Avatar className="h-10 w-10 flex-shrink-0">
+                                {displayProfileUrl ? (
+                                    <AvatarImage 
+                                        src={displayProfileUrl} 
+                                        alt={displayName}
+                                        className="object-cover"
+                                    />
+                                ) : null}
                                 <AvatarFallback
                                     className="text-xs font-bold text-white"
                                     style={{ backgroundColor: theme.primaryColor }}
@@ -371,7 +385,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                             </Avatar>
                             <span className="hidden flex-col items-start leading-none sm:flex">
                                 <span className="text-sm font-semibold text-slate-800">{displayName}</span>
-                                <span className="mt-0.5 text-[11px] text-slate-400">{isHOD ? 'HOD' : 'USER'} View</span>
+                                <span className="mt-0.5 text-[11px] text-slate-400">{displayCompany}</span>
                             </span>
                             <ChevronDown className="h-3.5 w-3.5 text-slate-400 transition-colors group-hover:text-slate-600" />
                         </button>
@@ -385,6 +399,13 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                         <div className="border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white px-5 pb-4 pt-5">
                             <div className="mb-4 flex items-center gap-3">
                                 <Avatar className="h-12 w-12">
+                                    {displayProfileUrl ? (
+                                        <AvatarImage 
+                                            src={displayProfileUrl} 
+                                            alt={displayName}
+                                            className="object-cover"
+                                        />
+                                    ) : null}
                                     <AvatarFallback
                                         className="text-base font-bold text-white"
                                         style={{ backgroundColor: theme.primaryColor }}
@@ -393,8 +414,9 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                                         {initials}
                                     </AvatarFallback>
                                 </Avatar>
-                                <div>
+                                <div className="flex-1">
                                     <p className="text-sm font-bold text-slate-900">{displayName}</p>
+                                    {displayEmail && <p className="text-xs text-slate-400">{displayEmail}</p>}
                                     <p className="mt-0.5 text-xs text-slate-400">{displayRole}</p>
                                 </div>
                             </div>
@@ -435,14 +457,24 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                                             {c.switcherName ?? c.name}
                                         </span>
                                     ))}
+                                    {displayDesignation && (
+                                        <span className="rounded-full px-2.5 py-1 text-xs font-medium bg-slate-800 text-white">
+                                            {displayDesignation}
+                                        </span>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="mt-3 flex flex-wrap gap-1.5">
                                     <span
                                         className="rounded-full px-2.5 py-1 text-xs font-medium bg-slate-800 text-white"
                                     >
-                                        {allCompanies.find(c => c.slug === companySlug)?.name || companySlug}
+                                        {displayCompany}
                                     </span>
+                                    {displayDesignation && (
+                                        <span className="rounded-full px-2.5 py-1 text-xs font-medium bg-slate-800 text-white">
+                                            {displayDesignation}
+                                        </span>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -452,27 +484,33 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                             {/* My View button — only in HOD variant */}
                             {variant === 'hod' && (
                                 <button className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900">
-                                    <User className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                                    <UserIcon className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
                                     <span className="text-sm font-medium">My View</span>
                                 </button>
                             )}
 
-                            {isHOD && (
+                            {variant === 'hod' && (
                                 <>
-                                    <button className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900">
+                                    <Link
+                                        href={`/hod/${companySlug}/user-mgt`}
+                                        className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                                    >
                                         <Users className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
                                         <span className="text-sm font-medium">User Management</span>
                                         <Badge variant="secondary" className="ml-auto text-xs">
                                             HOD
                                         </Badge>
-                                    </button>
-                                    <button className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900">
-                                        <Settings className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                                    </Link>
+                                    <Link
+                                        href="/hod/projection-data-form"
+                                        className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                                    >
+                                        <BarChart3 className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
                                         <span className="text-sm font-medium">Projection Data Form</span>
                                         <Badge variant="secondary" className="ml-auto text-xs">
                                             HOD
                                         </Badge>
-                                    </button>
+                                    </Link>
                                 </>
                             )}
                         </nav>

@@ -16,6 +16,8 @@ interface LoginResponse {
     role: string
     company: string | null
     is_active: string
+    profile_url?: string
+    designation?: string
   }
   session?: {
     expiresAt: string
@@ -58,7 +60,9 @@ export default function LoginPage() {
         email: data.user!.email,
         role: data.user!.role,
         company: data.user!.company,
-        is_active: data.user!.is_active
+        is_active: data.user!.is_active,
+        profile_url: data.user!.profile_url || '',
+        designation: data.user!.designation || ''
       }))
 
       // Store session info in localStorage
@@ -78,9 +82,9 @@ export default function LoginPage() {
       if (userRole === 'User') {
         redirectPath = `/user/${company}`
       } else if (userRole === 'HOD') {
-        redirectPath = `/hod/${company}/development`
+        redirectPath = `/hod/${company}`
       } else {
-        redirectPath = `/hod/${company}/development`
+        redirectPath = `/hod/${company}`
       }
       
       // Use window.location for more reliable redirect

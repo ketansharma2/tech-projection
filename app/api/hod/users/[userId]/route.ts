@@ -13,7 +13,7 @@ export async function PUT(
   try {
     const { userId } = await params
     const body = await request.json()
-    const { name, role, company, is_active, profile_url } = body
+    const { name, designation, role, company, is_active, profile_url } = body
 
     // Validate required fields
     if (!userId) {
@@ -30,6 +30,7 @@ export async function PUT(
     const updateData: Record<string, unknown> = {}
     
     if (name !== undefined) updateData.name = name
+    if (designation !== undefined) updateData.designation = designation
     if (role !== undefined) updateData.role = role
     if (company !== undefined) updateData.company = company
     if (is_active !== undefined) updateData.is_active = is_active

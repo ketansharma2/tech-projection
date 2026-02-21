@@ -6,6 +6,8 @@ export interface User {
   role: string
   company: string | null
   is_active: string
+  profile_url?: string
+  designation?: string
 }
 
 export interface Session {

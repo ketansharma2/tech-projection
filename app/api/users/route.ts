@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Build query - fetch all users (no filter for is_active or company)
     const { data, error } = await supabase
       .from('users')
-      .select('user_id, name, email')
+      .select('user_id, name, email, profile_url')
       .order('name', { ascending: true })
 
     if (error) {
@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
     const userNames = data?.map(user => user.name || user.email?.split('@')[0] || '').filter(Boolean) || []
     const usersWithId = data?.map(user => ({
       id: user.user_id,
-      name: user.name || user.email?.split('@')[0] || ''
+      name: user.name || user.email?.split('@')[0] || '',
+      profile_url: user.profile_url || ''
     })).filter(u => u.name) || []
 
     return NextResponse.json({ users: data, userNames, usersWithId })

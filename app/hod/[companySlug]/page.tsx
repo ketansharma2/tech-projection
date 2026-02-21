@@ -51,7 +51,7 @@ function adjustColor(hex: string, percent: number, isLight = false): string {
   ).toString(16).slice(1)
 }
 
-export default function UserCompanyPage({
+export default function HodCompanyPage({
   params,
 }: {
   params: Promise<{ companySlug: string }>
@@ -59,7 +59,7 @@ export default function UserCompanyPage({
   const { companySlug } = use(params)
   const theme = getCompanyTheme(companySlug)
   const colors = useMemo(() => getCompanyColors(theme.primaryColor), [theme.primaryColor])
-  const basePath = `/user/${companySlug}`
+  const basePath = `/hod/${companySlug}`
 
   return (
     <main className="min-h-screen" style={{ background: `radial-gradient(140% 90% at 50% 0%, ${colors.pageTint}ee, transparent 62%), ${colors.pageTint}` }}>

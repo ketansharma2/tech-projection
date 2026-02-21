@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     // Get user data from users table
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
-      .select('name, email, role, company, is_active')
+      .select('name, email, role, company, is_active, profile_url, designation')
       .eq('user_id', userId)
       .single()
 
@@ -46,13 +46,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user is active
-    if (!userData.is_active) {
+    // Check if user is active (must be "Yes")
+    if (userData.is_active !== 'Yes') {
       // Clean up the auth session
       await supabaseAdmin.auth.admin.signOut(userId)
       
       return NextResponse.json(
-        { error: 'Account is inactive. Please contact administrator.' },
+        { error: 'You cannot login. Please ask your HOD/admin to activate your account.' },
         { status: 403 }
       )
     }
@@ -69,7 +69,9 @@ export async function POST(request: NextRequest) {
         email: userData.email,
         role: userData.role,
         company: userData.company,
-        is_active: userData.is_active ? 'Yes' : 'No'
+        is_active: userData.is_active ? 'Yes' : 'No',
+        profile_url: userData.profile_url || '',
+        designation: userData.designation || ''
       },
       session: {
         expiresAt: sessionExpiry
