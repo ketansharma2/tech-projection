@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .from('users')
       .select('user_id, name, email, role, company, is_active, profile_url, designation')
       .contains('company', [companyUpper])
-      .order('created_at', { ascending: true })
+      .order('name', { ascending: true })
 
     if (error) {
       console.error('Error fetching users:', error)

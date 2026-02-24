@@ -30,7 +30,7 @@ import { logout, getUser, type User as AuthUser } from '@/lib/auth'
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-type Mode = 'Development' | 'Operations'
+type Mode = 'Development' | 'Operations' | null
 type Head = 'Digital Marketing' | 'Data Management' | 'Products'
 
 const HEAD_OPTIONS: { label: Head; path: (slug: string) => string; icon: React.ReactNode }[] = [
@@ -42,12 +42,28 @@ const HEAD_OPTIONS: { label: Head; path: (slug: string) => string; icon: React.R
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
-function deriveState(pathname: string): { mode: Mode; head: Head | null } {
+function deriveState(pathname: string): { mode: Mode | null; head: Head | null } {
+    // Quick check for operations
     if (pathname.includes('/operations')) return { mode: 'Operations', head: null }
-    let head: Head | null = 'Digital Marketing'
-    if (pathname.includes('/development/data')) head = 'Data Management'
-    else if (pathname.includes('/development/products')) head = 'Products'
-    return { mode: 'Development', head }
+    
+    // Quick check for development
+    if (pathname.includes('/development')) {
+        // Check for specific sub-depts
+        if (pathname.endsWith('/dm') || pathname.includes('/development/dm')) {
+            return { mode: 'Development', head: 'Digital Marketing' }
+        }
+        if (pathname.endsWith('/data') || pathname.includes('/development/data')) {
+            return { mode: 'Development', head: 'Data Management' }
+        }
+        if (pathname.endsWith('/products') || pathname.includes('/development/products')) {
+            return { mode: 'Development', head: 'Products' }
+        }
+        // On development main page - no specific head
+        return { mode: 'Development', head: null }
+    }
+    
+    // Not on a module-specific route
+    return { mode: null, head: null }
 }
 
 // ─────────────────────────────────────────────
@@ -255,6 +271,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
     )
 
     const navigateMode = (newMode: Mode) => {
+        if (!newMode) return // Don't navigate if null
         const prefix = getPathPrefix()
         const pathPrefix = prefix ? `/${prefix}` : ''
         if (newMode === 'Operations') {
@@ -336,7 +353,10 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button className="focus:outline-none">
-                            <NavTrigger label={mode} sublabel="Module" />
+                            <NavTrigger 
+                                label={mode ?? 'Select Module'} 
+                                sublabel="Module" 
+                            />
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -368,11 +388,11 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                 {mounted && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="focus:outline-none" disabled={mode === 'Operations'}>
+                        <button className="focus:outline-none" disabled={mode === 'Operations' || mode === null}>
                             <NavTrigger
-                                label={mode === 'Operations' ? 'N/A' : (head ?? 'Digital Marketing')}
+                                label={mode === 'Operations' || mode === null ? 'N/A' : (head ?? 'Select Sub Dept')}
                                 sublabel="Sub Dept"
-                                disabled={mode === 'Operations'}
+                                disabled={mode === 'Operations' || mode === null}
                             />
                         </button>
                     </DropdownMenuTrigger>

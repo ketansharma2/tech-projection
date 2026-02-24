@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('users')
       .select('user_id, name, email, role, is_active, company, profile_url, created_at, designation')
-      .order('created_at', { ascending: false })
+      .order('name', { ascending: true })
 
     // Filter by company if provided
     if (company) {
