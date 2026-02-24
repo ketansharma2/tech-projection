@@ -16,7 +16,7 @@ interface LoginResponse {
     name: string
     email: string
     role: string
-    company: string | null
+    company: string | string[] | null
     is_active: string
     profile_url?: string
     designation?: string
@@ -77,16 +77,23 @@ export default function LoginPage() {
       }))
 
       // Redirect based on user role
-      const company = (data.user!.company || 'maven').toLowerCase()
+      // Handle company - could be array or string
+      // If multiple companies, redirect to first company in the list
+      let companyValue: string
+      if (Array.isArray(data.user!.company)) {
+        companyValue = (data.user!.company[0] || 'maven').toLowerCase()
+      } else {
+        companyValue = (data.user!.company || 'maven').toLowerCase()
+      }
       const userRole = data.user!.role
       
       let redirectPath: string
       if (userRole === 'User') {
-        redirectPath = `/user/${company}`
+        redirectPath = `/user/${companyValue}`
       } else if (userRole === 'HOD') {
-        redirectPath = `/hod/${company}`
+        redirectPath = `/hod/${companyValue}`
       } else {
-        redirectPath = `/hod/${company}`
+        redirectPath = `/hod/${companyValue}`
       }
       
       window.location.href = redirectPath
@@ -100,45 +107,14 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8" style={{ background: 'linear-gradient(135deg, #F0F4F8 0%, #E6EEF8 100%)' }}>
-      {/* Company Logos Container */}
-      <div className="mb-12">
-        <div className="flex items-center gap-6">
-          {Object.values(companyThemeConfig).map((company) => (
-            <div
-              key={company.slug}
-              className="flex flex-col items-center gap-3"
-            >
-              <div 
-                className="w-24 h-24 rounded-full flex items-center justify-center bg-white border-2 border-gray-200 shadow-lg p-4"
-                style={{ boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)' }}
-              >
-                {company.logoUrl ? (
-                  <img 
-                    src={company.logoUrl} 
-                    alt={`${company.name} Logo`}
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <span className="text-2xl font-bold" style={{ color: company.primaryColor }}>
-                    {company.logoInitials}
-                  </span>
-                )}
-              </div>
-              <span className="text-sm font-medium text-gray-700">{company.name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Login Container */}
-      <Card className="w-full max-w-md border border-gray-200 shadow-lg">
-        <CardContent className="pt-8 pb-8">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-2" style={{ color: '#0F172A' }}>Welcome Back</h2>
-            <p style={{ color: '#0F172A' }}>Sign In</p>
+      <Card className="w-full max-w-sm border border-gray-200 shadow-lg min-h-[400px] flex flex-col rounded-2xl py-4">
+        <CardContent className="pt-4 pb-4 flex-1">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold mb-2" style={{ color: '#0F172A' }}>Sign In</h2>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" suppressHydrationWarning>
             {error && (
               <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg flex items-center gap-2">
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,6 +136,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-11 px-4 border-gray-200 focus:border-gray-400 focus:ring-gray-200"
                 required
+                suppressHydrationWarning
               />
             </div>
             
@@ -175,6 +152,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-11 px-4 pr-10 border-gray-200 focus:border-gray-400 focus:ring-gray-200"
                 required
+                suppressHydrationWarning
               />
               <button
                 type="button"
@@ -214,6 +192,35 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
+
+        {/* Company Logos at Bottom */}
+        <div className="pb-3 px-6">
+          <div className="flex items-center justify-center gap-4 pt-2">
+            {Object.values(companyThemeConfig).map((company) => (
+              <div
+                key={company.slug}
+                className="flex flex-col items-center gap-1"
+              >
+                <div 
+                  className="w-12 h-12 rounded-full flex items-center justify-center bg-white border border-gray-200 shadow-sm p-2"
+                >
+                  {company.logoUrl ? (
+                    <img 
+                      src={company.logoUrl} 
+                      alt={`${company.name} Logo`}
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-xs font-bold" style={{ color: company.primaryColor }}>
+                      {company.logoInitials}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-medium text-gray-600">{company.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </Card>
     </div>
   )

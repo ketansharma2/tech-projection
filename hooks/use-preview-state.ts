@@ -7,6 +7,7 @@ interface UserInfo {
   userAuthId: string
   name: string
   position: string
+  designation: string
   email: string
   profile_url?: string
 }
@@ -39,6 +40,7 @@ export function usePreviewState(): PreviewState {
             userAuthId: u.auth_id || u.id,
             name: u.name || 'Unknown',
             position: u.position || 'Team Member',
+            designation: u.designation || '',
             email: u.email || '',
             profile_url: u.profile_url || '',
           }))

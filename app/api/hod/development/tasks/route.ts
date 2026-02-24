@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Initialize admin client for server-side operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-// DM Section mapping from database values to UI sectionId
-const dmSectionMapping: Record<string, string> = {
-  'Linked In': 'linkedin',
-  'Social Media': 'social',
-  'SEO On': 'seo-on',
-  'SEO Off': 'seo-off',
-  'Content Writing': 'content',
-}
 
 interface Task {
   id: string
@@ -57,6 +47,15 @@ interface DBTask {
   deleted_at: string | null
 }
 
+// DM Section mapping from database values to UI sectionId
+const dmSectionMapping: Record<string, string> = {
+  'Linked In': 'linkedin',
+  'Social Media': 'social',
+  'SEO On': 'seo-on',
+  'SEO Off': 'seo-off',
+  'Content Writing': 'content',
+}
+
 function transformDBTaskToTask(dbTask: DBTask, sn: number, userNameMap: Record<string, string>): Task {
   // Handle empty dm_section - default to 'linkedin'
   const dmSection = dbTask.dm_section || ''
@@ -92,17 +91,15 @@ export async function GET(request: NextRequest) {
     const company = searchParams.get('company')
     const workArea = searchParams.get('work_area')
     const subDept = searchParams.get('sub_dept')
-    const userId = searchParams.get('user_id')
     const monthKey = searchParams.get('month_key')
 
-    if (!company || !workArea || !subDept) {
+    if (!company) {
       return NextResponse.json(
-        { error: 'Missing required parameters: company, work_area, sub_dept' },
+        { error: 'Missing required parameter: company' },
         { status: 400 }
       )
     }
 
-    // Create Supabase client with service role key for server-side auth
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // First, fetch all users to map user_id to name
@@ -118,26 +115,25 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build query - use ilike for case-insensitive company matching
+    // Build query - get all tasks for the company (no user filter)
     let query = supabase
       .from('tasks')
       .select('*')
       .is('deleted_at', null)
       .ilike('company', company)
-      .eq('work_area', workArea)
-      .eq('sub_dept', subDept)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: true })
+      .eq('work_area', workArea || 'DEVELOPMENT')
 
-    // If user_id is provided, filter by assigned_to
-    if (userId) {
-      query = query.eq('assigned_to', userId)
+    // If sub_dept is provided, filter by it
+    if (subDept) {
+      query = query.eq('sub_dept', subDept)
     }
 
     // If month_key is provided, filter by it
     if (monthKey) {
       query = query.eq('month_key', monthKey)
     }
+
+    query = query.order('created_at', { ascending: true })
 
     const { data, error } = await query
 

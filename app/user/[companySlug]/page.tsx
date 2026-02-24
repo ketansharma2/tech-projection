@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { use, useMemo } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import {
   ArrowRight,
   ChevronRight,
@@ -17,6 +17,7 @@ import {
   Sparkles,
   UserRound,
   Users,
+  Loader2,
 } from 'lucide-react'
 import { getCompanyTheme } from '@/lib/company-config'
 
@@ -60,6 +61,35 @@ export default function UserCompanyPage({
   const theme = getCompanyTheme(companySlug)
   const colors = useMemo(() => getCompanyColors(theme.primaryColor), [theme.primaryColor])
   const basePath = `/user/${companySlug}`
+
+  // Team data state
+  const [teamData, setTeamData] = useState<{
+    totalTeam: number
+    hod: { name: string; designation?: string } | null
+    tl: { name: string; designation?: string } | null
+    members: { name: string; designation?: string }[]
+  } | null>(null)
+  const [teamLoading, setTeamLoading] = useState(true)
+
+  // Fetch team data
+  useEffect(() => {
+    const fetchTeam = async () => {
+      try {
+        // Convert company to uppercase as DB stores it in uppercase
+        const companyUpper = companySlug.toUpperCase()
+        const res = await fetch(`/api/user/team?company=${companyUpper}`)
+        const data = await res.json()
+        if (data.totalTeam !== undefined) {
+          setTeamData(data)
+        }
+      } catch (error) {
+        console.error('Error fetching team:', error)
+      } finally {
+        setTeamLoading(false)
+      }
+    }
+    fetchTeam()
+  }, [companySlug])
 
   return (
     <main className="min-h-screen" style={{ background: `radial-gradient(140% 90% at 50% 0%, ${colors.pageTint}ee, transparent 62%), ${colors.pageTint}` }}>
@@ -171,58 +201,101 @@ export default function UserCompanyPage({
             }}
           >
             <div className="space-y-4">
-              {[
-                { label: 'Total Team', value: '6', icon: Users },
-                { label: 'Dept HOD', value: 'Bhavishya', icon: Crown },
-                { label: 'Dept TL', value: 'Ajay', icon: Shield },
-              ].map((item) => (
-                <div 
-                  key={item.label} 
-                  className="grid items-center gap-4 rounded-xl p-4"
-                  style={{ gridTemplateColumns: '56px 1fr', backgroundColor: colors.brandSurfaceSubtle }}
-                >
-                  <div 
-                    className="flex h-14 w-14 items-center justify-center rounded-xl"
-                    style={{ background: colors.iconTint, color: colors.primaryColor }}
-                  >
-                    <item.icon className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{item.label}</p>
-                    <p className="truncate text-sm font-semibold text-foreground">{item.value}</p>
-                  </div>
+              {teamLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ))}
-
-              <div 
-                className="grid items-start gap-4 rounded-xl p-4"
-                style={{ gridTemplateColumns: '56px 1fr', backgroundColor: colors.brandSurfaceSubtle }}
-              >
-                <div 
-                  className="flex h-14 w-14 items-center justify-center rounded-xl"
-                  style={{ background: colors.iconTint, color: colors.primaryColor }}
-                >
-                  <UserRound className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Members</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {['Lovekush', 'Diwakar', 'Ansh', 'Kirti'].map((name) => (
-                      <span 
-                        key={name} 
-                        className="text-[11px] inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium"
-                        style={{ 
-                          backgroundColor: colors.chipBg, 
-                          color: colors.chipText,
-                          border: `1px solid ${colors.brandBorder}b8`
-                        }}
+              ) : teamData?.totalTeam === 0 ? (
+                <p className="text-center text-sm text-muted-foreground py-4">No team members found.</p>
+              ) : (
+                <>
+                  {teamData?.hod && (
+                    <div 
+                      className="grid items-center gap-4 rounded-xl p-4"
+                      style={{ gridTemplateColumns: '56px 1fr', backgroundColor: colors.brandSurfaceSubtle }}
+                    >
+                      <div 
+                        className="flex h-14 w-14 items-center justify-center rounded-xl"
+                        style={{ background: colors.iconTint, color: colors.primaryColor }}
                       >
-                        {name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                        <Crown className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Dept HOD</p>
+                        <p className="truncate text-sm font-semibold text-foreground">{teamData.hod.name}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {teamData?.tl && (
+                    <div 
+                      className="grid items-center gap-4 rounded-xl p-4"
+                      style={{ gridTemplateColumns: '56px 1fr', backgroundColor: colors.brandSurfaceSubtle }}
+                    >
+                      <div 
+                        className="flex h-14 w-14 items-center justify-center rounded-xl"
+                        style={{ background: colors.iconTint, color: colors.primaryColor }}
+                      >
+                        <Shield className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Dept TL</p>
+                        <p className="truncate text-sm font-semibold text-foreground">{teamData.tl.name}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {teamData?.totalTeam !== undefined && (
+                    <div 
+                      className="grid items-center gap-4 rounded-xl p-4"
+                      style={{ gridTemplateColumns: '56px 1fr', backgroundColor: colors.brandSurfaceSubtle }}
+                    >
+                      <div 
+                        className="flex h-14 w-14 items-center justify-center rounded-xl"
+                        style={{ background: colors.iconTint, color: colors.primaryColor }}
+                      >
+                        <Users className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Total Team</p>
+                        <p className="truncate text-sm font-semibold text-foreground">{teamData.totalTeam}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {teamData?.members && teamData.members.length > 0 && (
+                    <div 
+                      className="grid items-start gap-4 rounded-xl p-4"
+                      style={{ gridTemplateColumns: '56px 1fr', backgroundColor: colors.brandSurfaceSubtle }}
+                    >
+                      <div 
+                        className="flex h-14 w-14 items-center justify-center rounded-xl"
+                        style={{ background: colors.iconTint, color: colors.primaryColor }}
+                      >
+                        <UserRound className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Members</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {teamData.members.map((member) => (
+                            <span 
+                              key={member.name} 
+                              className="text-[11px] inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium"
+                              style={{ 
+                                backgroundColor: colors.chipBg, 
+                                color: colors.chipText,
+                                border: `1px solid ${colors.brandBorder}b8`
+                              }}
+                            >
+                              {member.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

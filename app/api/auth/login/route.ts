@@ -60,6 +60,14 @@ export async function POST(request: NextRequest) {
     // Calculate session expiry (24 hours from now)
     const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
+    // Handle company - could be array (text[]) or string
+    let companyValue: string | string[]
+    if (Array.isArray(userData.company)) {
+      companyValue = userData.company
+    } else {
+      companyValue = userData.company || 'maven'
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Login successful',
@@ -68,7 +76,7 @@ export async function POST(request: NextRequest) {
         name: userData.name,
         email: userData.email,
         role: userData.role,
-        company: userData.company,
+        company: companyValue,
         is_active: userData.is_active ? 'Yes' : 'No',
         profile_url: userData.profile_url || '',
         designation: userData.designation || ''

@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   try {
     const contentType = request.headers.get('content-type') || ''
 
-    let email: string, password: string, name: string, designation: string, role: string, company: string, isActive: string, file: File | null
+    let email: string, password: string, name: string, designation: string, role: string, companies: string[], isActive: string, file: File | null
 
     // Check if request is FormData (with file) or JSON
     if (contentType.includes('multipart/form-data')) {
@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
       name = formData.get('name') as string
       designation = formData.get('designation') as string
       role = formData.get('role') as string || 'User'
-      company = formData.get('company') as string || ''
+      const companiesStr = formData.get('companies') as string
+      companies = companiesStr ? JSON.parse(companiesStr) : []
       isActive = formData.get('is_active') as string || 'Yes'
       file = formData.get('file') as File | null
     } else {
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       name = body.name
       designation = body.designation || ''
       role = body.role || 'User'
-      company = body.company || ''
+      companies = body.companies || []
       isActive = body.is_active !== undefined ? body.is_active : 'Yes'
       file = null
     }
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
         designation: designation || null,
         role,
         is_active: isActive,
-        company: company || null,
+        company: companies || [],
         profile_url: profileUrl
       })
       .select()

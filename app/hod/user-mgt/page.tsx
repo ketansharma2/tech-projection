@@ -1,45 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState, use, useRef } from 'react'
-import { 
-  Users, 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2,
-  Loader2,
-  X,
-  Check,
-  User,
-} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Users, Plus, Edit, Loader2, Check, User, ChevronDown, X } from 'lucide-react'
 import { getCompanyTheme, type CompanySlug } from '@/lib/company-config'
 
-// Generate company-specific colors
-function getCompanyColors(primaryColor: string) {
-  return {
-    primaryColor,
-    bgLight: adjustColor(primaryColor, 95, true),
-    bgSubtle: adjustColor(primaryColor, 90, true),
-    border: adjustColor(primaryColor, 80, true),
-  }
-}
-
-function adjustColor(hex: string, percent: number, isLight = false): string {
-  const num = parseInt(hex.replace('#', ''), 16)
-  const amt = Math.round(2.55 * percent)
-  const R = (num >> 16) + amt
-  const G = ((num >> 8) & 0x00ff) + amt
-  const B = (num & 0x0000ff) + amt
-  return '#' + (
-    0x1000000 +
-    (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
-    (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
-    (B < 255 ? (B < 1 ? 0 : B) : 255)
-  ).toString(16).slice(1)
-}
-
 type HeadSlug = 'dm' | 'data' | 'products'
-type PreviewRole = 'USER' | 'HOD'
+type PreviewRole = 'USER' | 'HOD' | 'TL'
 type StatusFilter = 'all' | 'active' | 'inactive'
 
 const companyOptions: CompanySlug[] = ['maven', 'mks', 'savvi', 'profit-pathshala']
@@ -51,7 +17,7 @@ interface User {
   email: string
   designation: string
   role: PreviewRole
-  company: CompanySlug
+  companies: CompanySlug[]
   active: boolean
   profileUrl?: string | null
 }
@@ -62,7 +28,7 @@ interface UserDraft {
   email: string
   designation: string
   role: PreviewRole
-  company: CompanySlug
+  companies: CompanySlug[]
   password?: string
   active: boolean
   profileImage?: File | null
@@ -75,7 +41,7 @@ function getDefaultDraft(): UserDraft {
     email: '',
     designation: '',
     role: 'USER',
-    company: 'maven',
+    companies: [],
     password: '',
     active: true,
     profileImage: null,
@@ -194,12 +160,34 @@ function DialogContent({ children, className = '' }: { children: React.ReactNode
   )
 }
 
-function DialogHeader({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-col space-y-1.5 text-center sm:text-left p-6 pb-0">{children}</div>
+function DialogHeader({ title, description }: { title: React.ReactNode; description: React.ReactNode }) {
+  return (
+    <div className="text-left p-3 py-4 flex items-center gap-3 rounded-lg" style={{ backgroundColor: '#f8fafc' }}>
+      <div 
+        className="flex h-12 w-12 items-center justify-center rounded-xl shrink-0" 
+        style={{ backgroundColor: '#e0f2fe', color: '#103c7f' }}
+      >
+        <User className="h-6 w-6" />
+      </div>
+      <div className="flex flex-col">
+        <h2 className="text-xl font-bold" style={{ color: '#103c7f' }}>
+          {title}
+        </h2>
+        <p className="text-sm text-gray-500">{description}</p>
+      </div>
+    </div>
+  )
 }
 
 function DialogTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-lg font-semibold leading-none tracking-tight">{children}</h2>
+  return (
+    <h2 className="text-lg font-semibold leading-none tracking-tight flex items-center gap-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: '#e0f2fe', color: '#103c7f' }}>
+        <User className="h-5 w-5" />
+      </div>
+      <span>{children}</span>
+    </h2>
+  )
 }
 
 function DialogDescription({ children }: { children: React.ReactNode }) {
@@ -210,13 +198,72 @@ function DialogFooter({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-6 pt-4">{children}</div>
 }
 
-export default function HodUserManagementPage({
-  params,
+// Custom Multi-Select Dropdown Component
+function MultiSelect({
+  label,
+  options,
+  selected,
+  onChange,
+  placeholder = 'Select options'
 }: {
-  params: Promise<{ companySlug: string }>
+  label: string
+  options: { value: string; label: string }[]
+  selected: string[]
+  onChange: (selected: string[]) => void
+  placeholder?: string
 }) {
-  const { companySlug } = use(params)
-  
+  const [isOpen, setIsOpen] = useState(false)
+
+  const toggleOption = (value: string) => {
+    if (selected.includes(value)) {
+      onChange(selected.filter(v => v !== value))
+    } else {
+      onChange([...selected, value])
+    }
+  }
+
+  const displayText = selected.length > 0 
+    ? selected.map(s => s.toUpperCase()).join(', ')
+    : placeholder
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</label>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+        >
+          <span className={selected.length === 0 ? 'text-muted-foreground' : ''}>
+            {displayText}
+          </span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {isOpen && (
+          <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-input bg-white shadow-lg">
+            {options.map((option) => (
+              <label
+                key={option.value}
+                className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-slate-50"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(option.value)}
+                  onChange={() => toggleOption(option.value)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <span className="text-sm">{option.label}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function HodUserManagementPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -229,15 +276,9 @@ export default function HodUserManagementPage({
   const [saving, setSaving] = useState(false)
   const [profilePreview, setProfilePreview] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  
-  const theme = getCompanyTheme(companySlug)
-  const colors = getCompanyColors(theme.primaryColor)
+  const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/hod/users')
       const data = await response.json()
@@ -249,8 +290,8 @@ export default function HodUserManagementPage({
           name: u.name,
           email: u.email,
           designation: u.designation || '',
-          role: u.role === 'HOD' ? 'HOD' as PreviewRole : 'USER' as PreviewRole,
-          company: u.company ? u.company.toLowerCase() as CompanySlug : 'maven',
+          role: u.role === 'HOD' ? 'HOD' as PreviewRole : u.role === 'TL' ? 'TL' as PreviewRole : 'USER' as PreviewRole,
+          companies: u.company ? (Array.isArray(u.company) ? u.company.map((c: string) => c.toLowerCase()) : [u.company.toLowerCase()]) : ['maven'],
           active: u.is_active === 'Yes',
           profileUrl: u.profile_url || null,
         }))
@@ -261,7 +302,17 @@ export default function HodUserManagementPage({
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      loadUsers()
+    }
+  }, [mounted, loadUsers])
 
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
@@ -273,11 +324,24 @@ export default function HodUserManagementPage({
         user.email.toLowerCase().includes(search)
       const matchesRole = roleFilter === 'all' || user.role === roleFilter
       const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? user.active : !user.active)
-      const matchesCompany = companyFilter === 'all' || user.company === companyFilter
+      const matchesCompany = companyFilter === 'all' || user.companies.includes(companyFilter as CompanySlug)
 
       return matchesQuery && matchesRole && matchesStatus && matchesCompany
     })
   }, [users, query, roleFilter, statusFilter, companyFilter])
+
+  // Show loading state until mounted to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <main className="pt-24 pb-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   const openAddDialog = () => {
     setDraft({
@@ -285,7 +349,7 @@ export default function HodUserManagementPage({
       email: '',
       designation: '',
       role: 'USER',
-      company: 'maven',
+      companies: [],
       password: '',
       active: true,
       profileImage: null,
@@ -303,7 +367,7 @@ export default function HodUserManagementPage({
       email: user.email,
       designation: user.designation,
       role: user.role,
-      company: user.company,
+      companies: user.companies,
       active: user.active,
     })
     setFormError('')
@@ -316,8 +380,8 @@ export default function HodUserManagementPage({
       setFormError('Name and designation are required.')
       return
     }
-    if (!draft.company) {
-      setFormError('Select a company.')
+    if (!draft.companies || draft.companies.length === 0) {
+      setFormError('Select at least one company.')
       return
     }
     if (!draft.userId && !draft.password) {
@@ -334,7 +398,7 @@ export default function HodUserManagementPage({
         formData.append('email', draft.email.trim())
         formData.append('designation', draft.designation.trim())
         formData.append('role', draft.role === 'USER' ? 'User' : 'HOD')
-        formData.append('company', draft.company.toUpperCase())
+        formData.append('companies', JSON.stringify(draft.companies.map(c => c.toUpperCase())))
         formData.append('is_active', draft.active ? 'Yes' : 'No')
         formData.append('file', draft.profileImage)
         
@@ -364,8 +428,8 @@ export default function HodUserManagementPage({
           name: draft.name.trim(),
           email: draft.email.trim(),
           designation: draft.designation.trim(),
-          role: draft.role === 'USER' ? 'User' : 'HOD',
-          company: draft.company.toUpperCase(),
+          role: draft.role === 'USER' ? 'User' : draft.role === 'TL' ? 'TL' : 'HOD',
+          companies: draft.companies.map(c => c.toUpperCase()),
           is_active: draft.active ? 'Yes' : 'No',
         }
 
@@ -415,8 +479,8 @@ export default function HodUserManagementPage({
           name: user.name,
           email: user.email,
           designation: user.designation,
-          role: user.role === 'HOD' ? 'HOD' : 'User',
-          company: user.company.toUpperCase(),
+          role: user.role === 'HOD' ? 'HOD' : user.role === 'TL' ? 'TL' : 'User',
+          companies: user.companies.map(c => c.toUpperCase()),
           is_active: nextActive ? 'Yes' : 'No',
         })
       })
@@ -453,19 +517,19 @@ export default function HodUserManagementPage({
   }
 
   return (
-    <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: colors.bgLight }}>
+    <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: '#f8fafc' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div 
               className="flex h-12 w-12 items-center justify-center rounded-xl"
-              style={{ backgroundColor: colors.bgSubtle, color: colors.primaryColor }}
+              style={{ backgroundColor: '#e0f2fe', color: '#103c7f' }}
             >
               <Users className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: colors.primaryColor }}>
+              <h1 className="text-2xl font-bold" style={{ color: '#103c7f' }}>
                 User Management
               </h1>
               <p className="text-sm text-gray-500">
@@ -474,7 +538,7 @@ export default function HodUserManagementPage({
             </div>
           </div>
           
-          <Button onClick={openAddDialog} variant="brand">
+          <Button onClick={openAddDialog} className="!bg-[#103c7f] !text-white">
             <Plus className="h-4 w-4 mr-2" />
             Add User
           </Button>
@@ -495,6 +559,7 @@ export default function HodUserManagementPage({
             >
               <option value="all">All Roles</option>
               <option value="HOD">HOD</option>
+              <option value="TL">TL</option>
               <option value="USER">User</option>
             </select>
             <select
@@ -524,7 +589,7 @@ export default function HodUserManagementPage({
         {/* Users Table */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin" style={{ color: colors.primaryColor }} />
+            <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
           <section className="rounded-xl border border-border bg-card shadow-sm">
@@ -560,7 +625,7 @@ export default function HodUserManagementPage({
                           ) : (
                             <div 
                               className="h-12 w-12 rounded-full flex items-center justify-center text-lg font-bold"
-                              style={{ backgroundColor: colors.bgSubtle, color: colors.primaryColor }}
+                              style={{ backgroundColor: '#e0f2fe', color: '#103c7f' }}
                             >
                               {user.name.charAt(0).toUpperCase()}
                             </div>
@@ -578,9 +643,23 @@ export default function HodUserManagementPage({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {user.company.toUpperCase()}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {user.companies.map((company) => {
+                            const theme = getCompanyTheme(company)
+                            return (
+                              <span 
+                                key={company}
+                                className="rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                                style={{ 
+                                  backgroundColor: theme.primaryColor, 
+                                  color: 'white'
+                                }}
+                              >
+                                {company.toUpperCase()}
+                              </span>
+                            )
+                          })}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -606,10 +685,11 @@ export default function HodUserManagementPage({
       {/* Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{draft.userId ? 'Edit User' : 'Add User'}</DialogTitle>
-            <DialogDescription>Configure role, company access, and development head scope.</DialogDescription>
-          </DialogHeader>
+          <DialogHeader
+           
+            title={draft.userId ? 'Edit User' : 'Add User'}
+            description="Configure role, company access, and development head scope."
+          />
 
           <div className="space-y-4 p-6 pt-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -665,12 +745,12 @@ export default function HodUserManagementPage({
                 <div className="flex items-center gap-4">
                   <div 
                     className="h-16 w-16 rounded-full overflow-hidden border border-border flex items-center justify-center"
-                    style={{ backgroundColor: colors.bgSubtle }}
+                    style={{ backgroundColor: '#f1f5f9' }}
                   >
                     {profilePreview ? (
                       <img src={profilePreview} alt="Profile" className="h-full w-full object-cover" />
                     ) : (
-                      <User className="h-8 w-8" style={{ color: colors.primaryColor }} />
+                      <User className="h-8 w-8" />
                     )}
                   </div>
                   <input
@@ -686,32 +766,27 @@ export default function HodUserManagementPage({
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Role</label>
-              <select
-                value={draft.role}
-                onChange={(event) => setDraft((prev) => ({ ...prev, role: event.target.value as PreviewRole }))}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="USER">User</option>
-                <option value="HOD">HOD</option>
-              </select>
-            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Role</label>
+                <select
+                  value={draft.role}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, role: event.target.value as PreviewRole }))}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="USER">User</option>
+                  <option value="HOD">HOD</option>
+                  <option value="TL">TL</option>
+                </select>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Company</label>
-              <select
-                value={draft.company}
-                onChange={(event) => setDraft((prev) => ({ ...prev, company: event.target.value as CompanySlug }))}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="">Select a company</option>
-                {companyOptions.map((company) => (
-                  <option key={company} value={company}>
-                    {company.toUpperCase()}
-                  </option>
-                ))}
-              </select>
+              <MultiSelect
+                label="Companies"
+                options={companyOptions.map(c => ({ value: c, label: c.toUpperCase() }))}
+                selected={draft.companies}
+                onChange={(selected) => setDraft((prev) => ({ ...prev, companies: selected as CompanySlug[] }))}
+                placeholder="Select companies"
+              />
             </div>
 
             <div className="space-y-2">
@@ -733,7 +808,7 @@ export default function HodUserManagementPage({
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="brand" onClick={handleSaveDraft} disabled={saving}>
+            <Button className="!bg-[#103c7f] !text-white" onClick={handleSaveDraft} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
               {saving ? 'Please Wait ! Creating User.......' : 'Save User'}
             </Button>

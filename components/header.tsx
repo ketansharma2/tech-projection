@@ -182,23 +182,55 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
     
     // Get logged in user from localStorage after hydration to avoid mismatch
     const [loggedInUser, setLoggedInUser] = React.useState<AuthUser | null>(null)
+    const [mounted, setMounted] = React.useState(false)
     
     React.useEffect(() => {
         setLoggedInUser(getUser())
+        setMounted(true)
     }, [])
     
     // Display based on role - use defaults to avoid SSR mismatch
     // Use selectedUser in HOD mode, otherwise use loggedInUser (from auth)
-    const displayName = (isHOD && selectedUser?.name) ? selectedUser.name : (loggedInUser?.name || 'User')
-    const displayRole = isHOD 
+    const displayName = !mounted ? 'User' : (isHOD && selectedUser?.name) ? selectedUser.name : (loggedInUser?.name || 'User')
+    const displayRole = !mounted ? 'Head of Department' : (isHOD 
         ? (selectedUser?.position || 'Head of Department')
-        : (loggedInUser?.role || 'Team Member')
-    const displayProfileUrl = isHOD ? selectedUser?.profile_url : loggedInUser?.profile_url
-    const displayDesignation = isHOD ? '' : (loggedInUser?.designation || '')
-    const displayEmail = isHOD ? '' : (loggedInUser?.email || '')
-    // Get company name from user data
-    const displayCompany = loggedInUser?.company || ''
-    const initials = displayName.charAt(0).toUpperCase()
+        : (loggedInUser?.role || 'Team Member'))
+    const displayProfileUrl = !mounted ? '' : (isHOD ? selectedUser?.profile_url : loggedInUser?.profile_url)
+    const displayDesignation = !mounted ? '' : (isHOD ? (selectedUser?.designation || '') : (loggedInUser?.designation || ''))
+    const displayEmail = !mounted ? '' : (isHOD ? '' : (loggedInUser?.email || ''))
+    // Show user role instead of company in the collapsed profile section
+    const displayCompany = !mounted ? '' : (loggedInUser?.role || '')
+    const initials = !mounted ? 'U' : displayName.charAt(0).toUpperCase()
+
+    // Get user's allowed companies (for User role, filter to only show user's companies)
+    const getUserCompanies = (): CompanyTheme[] => {
+        if (!mounted) return []
+        const userCompany = loggedInUser?.company
+        
+        // If HOD, show all companies
+        if (variant === 'hod') {
+            return allCompanies
+        }
+        
+        // If User, filter to only user's companies
+        // Handle both array and string formats for backward compatibility
+        // Use case-insensitive comparison
+        if (Array.isArray(userCompany)) {
+            // New format: array of company slugs (may be uppercase)
+            return allCompanies.filter(c => 
+                userCompany.some(uc => uc.toLowerCase() === c.slug.toLowerCase())
+            )
+        } else if (typeof userCompany === 'string' && userCompany) {
+            // Old format: single company string
+            return allCompanies.filter(c => 
+                c.slug.toLowerCase() === userCompany.toLowerCase()
+            )
+        }
+        // If no company data, return empty array
+        return []
+    }
+    
+    const userCompanies = getUserCompanies()
 
     // Get the path prefix (user/hod) from current URL
     const getPathPrefix = () => {
@@ -228,7 +260,8 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
         if (newMode === 'Operations') {
             router.push(`${pathPrefix}/${companySlug}/operations`)
         } else {
-            router.push(getHeadPath(head ?? 'Digital Marketing'))
+            // Go to development main page instead of a specific sub-department
+            router.push(`${pathPrefix}/${companySlug}/development`)
         }
     }
 
@@ -250,6 +283,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
         <header
             className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between border-b border-slate-200/80 bg-white px-6"
             style={{ height: 72 }}
+            suppressHydrationWarning
         >
             {/* LEFT: Company logo + switcher chevron */}
             <div className="flex items-center gap-2">
@@ -257,6 +291,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                     <CompanyLogo theme={theme} size={65} />
                 </Link>
 
+                {mounted && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button className="h-7 w-7 inline-flex items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none">
@@ -270,7 +305,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                         <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
                             Switch Company
                         </p>
-                        {allCompanies.map((c) => {
+                        {userCompanies.map((c) => {
                             const active = c.slug === companySlug
                             return (
                                 <DropdownMenuItem
@@ -281,10 +316,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                                 >
                                     <CompanyLogo theme={c} size={40} />
                                     <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-sm font-medium leading-tight">{c.name}</span>
-                                        {c.domain && (
-                                            <span className="mt-0.5 block truncate text-xs text-slate-400">{c.domain}</span>
-                                        )}
+                                        <span className="block truncate text-sm font-medium leading-tight">{c.switcherName || c.name}</span>
                                     </span>
                                     {active && <Check className="h-4 w-4 flex-shrink-0 text-slate-600" />}
                                 </DropdownMenuItem>
@@ -292,6 +324,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                         })}
                     </DropdownMenuContent>
                 </DropdownMenu>
+                )}
             </div>
 
             {/* RIGHT: Mode / Head / User */}
@@ -299,6 +332,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                 <Sep />
 
                 {/* Mode dropdown */}
+                {mounted && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button className="focus:outline-none">
@@ -328,14 +362,16 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                         />
                     </DropdownMenuContent>
                 </DropdownMenu>
+                )}
 
                 {/* Head dropdown — only when Development */}
+                {mounted && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button className="focus:outline-none" disabled={mode === 'Operations'}>
                             <NavTrigger
                                 label={mode === 'Operations' ? 'N/A' : (head ?? 'Digital Marketing')}
-                                sublabel="Workstream"
+                                sublabel="Sub Dept"
                                 disabled={mode === 'Operations'}
                             />
                         </button>
@@ -346,7 +382,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                             className="w-56 rounded-xl border border-slate-200/80 p-2 shadow-xl"
                         >
                             <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                Workstream
+                                Sub Dept
                             </p>
                             {HEAD_OPTIONS.map((opt) => (
                                 <DropItem
@@ -360,10 +396,12 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                         </DropdownMenuContent>
                     )}
                 </DropdownMenu>
+                )}
 
                 <Sep />
 
                 {/* User menu popover */}
+                {mounted && (
                 <Popover>
                     <PopoverTrigger asChild>
                         <button className="group inline-flex items-center gap-2.5 rounded-xl py-1.5 pl-2 pr-3 transition-all hover:bg-slate-50 focus:outline-none">
@@ -417,7 +455,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                                 <div className="flex-1">
                                     <p className="text-sm font-bold text-slate-900">{displayName}</p>
                                     {displayEmail && <p className="text-xs text-slate-400">{displayEmail}</p>}
-                                    <p className="mt-0.5 text-xs text-slate-400">{displayRole}</p>
+                                    <p className="mt-0.5 text-xs text-slate-400">{displayDesignation}</p>
                                 </div>
                             </div>
 
@@ -447,34 +485,37 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                             {/* Company access chips */}
                             {variant === 'hod' ? (
                                 <div className="mt-3 flex flex-wrap gap-1.5">
-                                    {allCompanies.map((c) => (
+                                    {allCompanies.map((c) => {
+                                        const isActive = c.slug === companySlug
+                                        return (
                                         <span
                                             key={c.slug}
-                                            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${c.slug === companySlug
-                                                    ? 'bg-slate-800 text-white'
-                                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                            className="rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                                            style={{
+                                                backgroundColor: isActive ? c.primaryColor : '#f1f5f9',
+                                                color: isActive ? 'white' : '#64748b',
+                                            }}
                                         >
                                             {c.switcherName ?? c.name}
                                         </span>
-                                    ))}
-                                    {displayDesignation && (
-                                        <span className="rounded-full px-2.5 py-1 text-xs font-medium bg-slate-800 text-white">
-                                            {displayDesignation}
-                                        </span>
-                                    )}
+                                    )})}
                                 </div>
                             ) : (
                                 <div className="mt-3 flex flex-wrap gap-1.5">
-                                    <span
-                                        className="rounded-full px-2.5 py-1 text-xs font-medium bg-slate-800 text-white"
-                                    >
-                                        {displayCompany}
-                                    </span>
-                                    {displayDesignation && (
-                                        <span className="rounded-full px-2.5 py-1 text-xs font-medium bg-slate-800 text-white">
-                                            {displayDesignation}
+                                    {userCompanies.map((c) => {
+                                        const isActive = c.slug === companySlug
+                                        return (
+                                        <span
+                                            key={c.slug}
+                                            className="rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                                            style={{
+                                                backgroundColor: isActive ? c.primaryColor : '#f1f5f9',
+                                                color: isActive ? 'white' : '#64748b',
+                                            }}
+                                        >
+                                            {c.switcherName ?? c.name}
                                         </span>
-                                    )}
+                                    )})}
                                 </div>
                             )}
                         </div>
@@ -484,7 +525,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                             {variant === 'hod' && (
                                 <>
                                     <Link
-                                        href={`/hod/${companySlug}/user-mgt`}
+                                        href="/hod/user-mgt"
                                         className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
                                     >
                                         <Users className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
@@ -518,6 +559,7 @@ export default function AppHeader({ companySlug, variant = 'hod' }: AppHeaderPro
                         </div>
                     </PopoverContent>
                 </Popover>
+                )}
             </div>
         </header>
     )

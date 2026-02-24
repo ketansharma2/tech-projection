@@ -26,8 +26,7 @@ const dmSections: DMSection[] = ['Linked In', 'Social Media', 'SEO On Page', 'SE
 const dataSections: DMSection[] = ['Data Management', 'Data Security']
 const productSections: DMSection[] = ['Developing', 'Developed']
 const statusOptions: TaskStatus[] = ['Not Started', 'In Progress', 'Done', 'Delegated', 'On Hold']
-const frequencyOptions: WorkingFrequency[] = ['Daily', 'Weekly', 'Monthly', 'As Per Req']
-const doerOptions = ['Lovekush', 'Ajay', 'Ansh', 'Sonu', 'Bhavishya', 'Kirti']
+const frequencyOptions: WorkingFrequency[] = ['Once ', 'Daily', 'Weekly', 'Monthly', 'As Per Req']
 
 const headLabelMap: Record<ProjectionHead, string> = {
   dm: 'DM',
@@ -44,10 +43,10 @@ function getCurrentMonth() {
 function getInitialFormState(): NewProjectionTaskInput {
   return {
     company: '' as CompanySlug,
-    mode: '' as ProjectionMode,
+    mode: 'development' as ProjectionMode,
     head: '' as ProjectionHead,
     dmSection: undefined,
-    workType: '' as WorkType,
+    workType: 'in-house' as WorkType,
     month: getCurrentMonth(),
     title: '',
     active: true,
@@ -106,6 +105,13 @@ export default function ProjectionDataFormPage() {
   const [previewHeadFilter, setPreviewHeadFilter] = useState<'all' | ProjectionHead>('all')
   const [previewMonthFilter, setPreviewMonthFilter] = useState<'all' | string>(getCurrentMonth())
   const [isLoading, setIsLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [isFormOpen, setIsFormOpen] = useState(false) // Form collapsed by default
+
+  // Mark component as mounted after hydration
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const changedBy = selectedUser?.name || 'HOD Preview'
 
@@ -311,6 +317,23 @@ export default function ProjectionDataFormPage() {
     }
   }
 
+  // Don't render form elements until mounted to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gray-50/50">
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <h1 className="text-xl font-bold text-gray-900">Projection Data Form</h1>
+          <p className="text-sm text-gray-500 mt-1">Add / update tasks for monthly projections (mock store)</p>
+        </div>
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50/50">
       {/* Simple Header */}
@@ -320,8 +343,27 @@ export default function ProjectionDataFormPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-6 space-y-6">
-        {/* Form Section */}
-        <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        {/* Form Section - Collapsible */}
+        <section className="rounded-xl bg-card shadow-sm overflow-hidden border border-gray-200">
+          {/* Toggle Button */}
+          <button
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-100 transition-colors rounded-t-xl"
+            style={{ borderLeft: '4px solid #3b82f6', backgroundColor: '#f9fafb' }}
+          >
+            <div className="text-left">
+              <h2 className="text-lg font-semibold text-foreground">Add New Task</h2>
+            </div>
+            <div className={`p-2 rounded-lg bg-gray-100 transition-transform ${isFormOpen ? 'rotate-180' : ''}`}>
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Form Content - Only visible when expanded */}
+          {isFormOpen && (
+          <div className="px-5 pb-5 bg-white">
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Company *</label>
@@ -602,6 +644,8 @@ export default function ProjectionDataFormPage() {
             {error ? <p className="text-sm font-medium text-red-600">{error}</p> : null}
             {success ? <p className="text-sm font-medium text-emerald-700">{success}</p> : null}
           </div>
+          </div>
+          )}
         </section>
 
         {/* Preview Section */}

@@ -4,7 +4,7 @@ export interface User {
   name: string
   email: string
   role: string
-  company: string | null
+  company: string | string[] | null
   is_active: string
   profile_url?: string
   designation?: string

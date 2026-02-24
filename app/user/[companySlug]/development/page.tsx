@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { use, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import {
   ArrowDown,
   Building2,
@@ -11,8 +11,10 @@ import {
   Globe,
   Megaphone,
   Package,
+  Loader2,
 } from 'lucide-react'
 import { getCompanyTheme } from '@/lib/company-config'
+import { getUser } from '@/lib/auth'
 
 // Generate company-specific colors based on primary color
 function getCompanyColors(primaryColor: string, headingColor: string) {
@@ -46,11 +48,21 @@ function adjustColor(hex: string, percent: number, isLight = false): string {
   ).toString(16).slice(1)
 }
 
+interface TaskItem {
+  id: string
+  title: string
+  status: string
+  deliveryMode: string
+  sub_dept: string
+  dmSection?: string
+}
+
 interface SubSection {
   id: string
   title: string
   status: 'Active' | 'OFF'
   items: string[]
+  taskCount?: number
   icon: typeof Building2
 }
 
@@ -69,7 +81,7 @@ const statusStyles: Record<'Active' | 'OFF', string> = {
   OFF: 'border border-border bg-muted text-muted-foreground',
 }
 
-function SubSectionCard({ sub, company }: { sub: SubSection; company: ReturnType<typeof getCompanyColors> }) {
+function SubSectionCard({ sub, company, loading }: { sub: SubSection; company: ReturnType<typeof getCompanyColors>; loading?: boolean }) {
   const isOff = sub.status === 'OFF'
 
   return (
@@ -95,9 +107,17 @@ function SubSectionCard({ sub, company }: { sub: SubSection; company: ReturnType
         </span>
       </div>
 
-      {isOff ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : isOff ? (
         <p className="text-sm italic text-muted-foreground">
           In-House development is currently inactive for this head.
+        </p>
+      ) : sub.items.length === 0 ? (
+        <p className="text-sm italic text-muted-foreground">
+          No tasks assigned yet.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -126,91 +146,186 @@ export default function DevelopmentPage({
   const company = useMemo(() => getCompanyColors(theme.primaryColor, theme.headingColor), [theme.primaryColor, theme.headingColor])
   const basePath = `/user/${companySlug}`
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [tasks, setTasks] = useState<TaskItem[]>([])
+  const [loading, setLoading] = useState(true)
 
+  // Fetch tasks for the logged-in user (all sub_depts)
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const user = getUser()
+        if (!user || !user.id) {
+          setLoading(false)
+          return
+        }
+
+        // Get current month in YYYY-MM format for month_key filter
+        const now = new Date()
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+        // Fetch tasks for all sub_depts in parallel
+        // DB values are uppercase: company, work_area, sub_dept
+        const companyUpper = companySlug.toUpperCase()
+        const subDepts = ['DM', 'DATA', 'PRODUCTS']
+        
+        const promises = subDepts.map(subDept => 
+          fetch(
+            `/api/tasks?company=${companyUpper}&work_area=DEVELOPMENT&sub_dept=${subDept}&user_id=${user.id}&month_key=${currentMonth}`
+          ).then(res => res.json())
+        )
+
+        const results = await Promise.all(promises)
+        
+        // Combine all tasks from different sub_depts
+        const allTasks: TaskItem[] = []
+        results.forEach((data: { tasks?: TaskItem[] }) => {
+          if (data.tasks) {
+            allTasks.push(...data.tasks)
+          }
+        })
+        
+        setTasks(allTasks)
+      } catch (error) {
+        console.error('Error fetching tasks:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTasks()
+  }, [companySlug])
+
+  // Get tasks for a section with smart selection (at least 1 from each dm_section)
+  // Returns array of { title, dmSection } objects
+  const getSectionTasks = (tasks: TaskItem[], maxCount: number = 3): { title: string; dmSection: string }[] => {
+    if (tasks.length === 0) return []
+    if (tasks.length <= maxCount) return tasks.map(t => ({ title: t.title, dmSection: t.dmSection || '' }))
+
+    // Group tasks by dm_section
+    const grouped: Record<string, TaskItem[]> = {}
+    tasks.forEach(task => {
+      const section = task.dmSection || 'other'
+      if (!grouped[section]) grouped[section] = []
+      grouped[section].push(task)
+    })
+
+    const uniqueSections = Object.keys(grouped)
+    
+    // If all tasks in same section, just return first 3
+    if (uniqueSections.length === 1) {
+      return tasks.slice(0, maxCount).map(t => ({ title: t.title, dmSection: t.dmSection || '' }))
+    }
+
+    // Otherwise, pick 1 from each section, then fill remaining slots randomly
+    const result: { title: string; dmSection: string }[] = []
+    const usedIds: Set<string> = new Set()
+
+    // First, take 1 from each section
+    uniqueSections.forEach(section => {
+      if (result.length < maxCount && grouped[section].length > 0) {
+        result.push({ title: grouped[section][0].title, dmSection: grouped[section][0].dmSection || '' })
+        usedIds.add(grouped[section][0].id)
+      }
+    })
+
+    // Fill remaining slots with any remaining tasks
+    const remaining = tasks.filter(t => !usedIds.has(t.id))
+    while (result.length < maxCount && remaining.length > 0) {
+      const randomIdx = Math.floor(Math.random() * remaining.length)
+      result.push({ title: remaining[randomIdx].title, dmSection: remaining[randomIdx].dmSection || '' })
+      remaining.splice(randomIdx, 1)
+    }
+
+    return result
+  }
   const sections = useMemo<Section[]>(
-    () => [
-      {
-        id: 'data',
-        title: 'Data Management',
-        summary: 'Internal data systems, automation pipelines, and external integrations for recruitment workflows.',
-        icon: Database,
-        href: `${basePath}/development/data`,
-        inHouse: {
-          id: 'data-inhouse',
-          title: 'In-House',
-          icon: Building2,
-          status: 'Active',
-          items: [
-            'Master database schema and intake pipeline checks',
-            'Data quality validation and duplicate protection',
-            'Tracker and reporting readiness updates',
-          ],
+    () => {
+      // Group tasks by sub_dept and delivery_mode
+      const tasksBySection: Record<string, { inHouse: TaskItem[], outsourcing: TaskItem[] }> = {
+        data: { inHouse: [], outsourcing: [] },
+        dm: { inHouse: [], outsourcing: [] },
+        products: { inHouse: [], outsourcing: [] },
+      }
+
+      tasks.forEach(task => {
+        // Convert sub_dept to lowercase for mapping
+        const subDept = (task.sub_dept || 'data').toLowerCase()
+        if (tasksBySection[subDept]) {
+          if (task.deliveryMode === 'In House') {
+            tasksBySection[subDept].inHouse.push(task)
+          } else if (task.deliveryMode === 'Outsourcing') {
+            tasksBySection[subDept].outsourcing.push(task)
+          }
+        }
+      })
+
+      return [
+        {
+          id: 'data',
+          title: 'Data Management',
+          summary: 'Internal data systems, automation pipelines, and external integrations for recruitment workflows.',
+          icon: Database,
+          href: `${basePath}/development/data`,
+          inHouse: {
+            id: 'data-inhouse',
+            title: 'In-House',
+            icon: Building2,
+            status: tasksBySection.data.inHouse.length > 0 ? 'Active' : 'OFF',
+            items: getSectionTasks(tasksBySection.data.inHouse, 3).map(t => t.dmSection ? `${t.title} (${t.dmSection})` : t.title),
+          },
+          outsourcing: {
+            id: 'data-outsourcing',
+            title: 'Out Sourcing',
+            icon: Globe,
+            status: tasksBySection.data.outsourcing.length > 0 ? 'Active' : 'OFF',
+            items: getSectionTasks(tasksBySection.data.outsourcing, 3).map(t => t.dmSection ? `${t.title} (${t.dmSection})` : t.title),
+          },
         },
-        outsourcing: {
-          id: 'data-outsourcing',
-          title: 'Out Sourcing',
-          icon: Globe,
-          status: 'Active',
-          items: [
-            'External integration and enrichment support',
-            'Delegated automation and one-off extraction tasks',
-          ],
+        {
+          id: 'dm',
+          title: 'Digital Marketing',
+          summary: 'SEO, content pipelines, analytics visibility, and social execution workstreams.',
+          icon: Megaphone,
+          href: `${basePath}/development/dm`,
+          inHouse: {
+            id: 'dm-inhouse',
+            title: 'In-House',
+            icon: Building2,
+            status: tasksBySection.dm.inHouse.length > 0 ? 'Active' : 'OFF',
+            items: getSectionTasks(tasksBySection.dm.inHouse, 3).map(t => t.dmSection ? `${t.title} (${t.dmSection})` : t.title),
+          },
+          outsourcing: {
+            id: 'dm-outsourcing',
+            title: 'Out Sourcing',
+            icon: Globe,
+            status: tasksBySection.dm.outsourcing.length > 0 ? 'Active' : 'OFF',
+            items: getSectionTasks(tasksBySection.dm.outsourcing, 3).map(t => t.dmSection ? `${t.title} (${t.dmSection})` : t.title),
+          },
         },
-      },
-      {
-        id: 'dm',
-        title: 'Digital Marketing',
-        summary: 'SEO, content pipelines, analytics visibility, and social execution workstreams.',
-        icon: Megaphone,
-        href: `${basePath}/development/dm`,
-        inHouse: {
-          id: 'dm-inhouse',
-          title: 'In-House',
-          icon: Building2,
-          status: 'Active',
-          items: [
-            'SEO plans and on-page optimization',
-            'Content calendar and social execution',
-            'Campaign reporting and engagement analytics',
-          ],
+        {
+          id: 'products',
+          title: 'Products',
+          summary: 'Product module delivery, QA checkpoints, and release-readiness tracking.',
+          icon: Package,
+          href: `${basePath}/development/products`,
+          inHouse: {
+            id: 'products-inhouse',
+            title: 'In-House',
+            icon: Building2,
+            status: tasksBySection.products.inHouse.length > 0 ? 'Active' : 'OFF',
+            items: getSectionTasks(tasksBySection.products.inHouse, 3).map(t => t.dmSection ? `${t.title} (${t.dmSection})` : t.title),
+          },
+          outsourcing: {
+            id: 'products-outsourcing',
+            title: 'Out Sourcing',
+            icon: Globe,
+            status: tasksBySection.products.outsourcing.length > 0 ? 'Active' : 'OFF',
+            items: getSectionTasks(tasksBySection.products.outsourcing, 3).map(t => t.dmSection ? `${t.title} (${t.dmSection})` : t.title),
+          },
         },
-        outsourcing: {
-          id: 'dm-outsourcing',
-          title: 'Out Sourcing',
-          icon: Globe,
-          status: 'Active',
-          items: [
-            'Creative asset support',
-            'Delegated ad and outreach execution',
-          ],
-        },
-      },
-      {
-        id: 'products',
-        title: 'Products',
-        summary: 'Product module delivery, QA checkpoints, and release-readiness tracking.',
-        icon: Package,
-        href: `${basePath}/development/products`,
-        inHouse: {
-          id: 'products-inhouse',
-          title: 'In-House',
-          icon: Building2,
-          status: 'OFF',
-          items: [],
-        },
-        outsourcing: {
-          id: 'products-outsourcing',
-          title: 'Out Sourcing',
-          icon: Globe,
-          status: 'Active',
-          items: [
-            'Module implementation and delegated enhancements',
-            'UI and delivery support with release coordination',
-          ],
-        },
-      },
-    ],
-    [basePath]
+      ]
+    },
+    [basePath, tasks]
   )
 
   const toggleCollapse = (sectionId: string) => {
@@ -327,8 +442,8 @@ export default function DevelopmentPage({
                   <>
                     <p className="mb-6 ml-14 text-sm leading-7 text-muted-foreground">{section.summary}</p>
                     <div className="grid gap-6 md:grid-cols-2">
-                      <SubSectionCard sub={section.inHouse} company={company} />
-                      <SubSectionCard sub={section.outsourcing} company={company} />
+                      <SubSectionCard sub={section.inHouse} company={company} loading={loading} />
+                      <SubSectionCard sub={section.outsourcing} company={company} loading={loading} />
                     </div>
                   </>
                 )}
