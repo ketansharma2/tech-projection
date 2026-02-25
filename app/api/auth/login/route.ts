@@ -57,8 +57,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calculate session expiry (24 hours from now)
-    const sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    // Use Supabase session's actual expiry time (defaults to 7 days if not available)
+    const expiresAt = authData.session.expires_at ?? (Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const sessionExpiry = new Date(expiresAt * 1000).toISOString()
 
     // Handle company - could be array (text[]) or string
     let companyValue: string | string[]

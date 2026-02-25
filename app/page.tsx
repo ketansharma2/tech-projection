@@ -17,10 +17,10 @@ export default function Page() {
       // Redirect based on user role
       let redirectPath: string
       if (role === 'User') {
-        redirectPath = `/user/${company}/development/dm`
+        redirectPath = `/user/${company}`
       } else {
         // HOD, Admin, or any other role goes to /hod
-        redirectPath = `/hod/${company}/development/dm`
+        redirectPath = `/hod/${company}`
       }
       
       router.push(redirectPath)
