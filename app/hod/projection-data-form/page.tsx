@@ -26,7 +26,7 @@ const dmSections: DMSection[] = ['Linked In', 'Social Media', 'SEO On Page', 'SE
 const dataSections: DMSection[] = ['Data Management', 'Data Security']
 const productSections: DMSection[] = ['Developing', 'Developed']
 const statusOptions: TaskStatus[] = ['Not Started', 'In Progress', 'Done', 'Delegated', 'On Hold']
-const frequencyOptions: WorkingFrequency[] = ['Once ', 'Daily', 'Weekly', 'Monthly', 'As Per Req']
+const frequencyOptions: WorkingFrequency[] = ['Once', 'Daily', 'Weekly', 'Monthly', 'As Per Req']
 
 const headLabelMap: Record<ProjectionHead, string> = {
   dm: 'DM',

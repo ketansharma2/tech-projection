@@ -11,7 +11,7 @@ export default function Page() {
     // Check if user is already logged in
     if (isLoggedIn()) {
       const user = getUser()
-      const company = (user?.company || 'maven').toLowerCase()
+      const company = (user?.company ? (Array.isArray(user.company) ? user.company[0] : user.company) : 'maven').toLowerCase()
       const role = user?.role || 'User'
       
       // Redirect based on user role
