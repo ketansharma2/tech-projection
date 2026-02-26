@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Search, ChevronDown } from 'lucide-react'
 import { teamMembers, statuses } from '@/lib/tasks-data'
 
@@ -43,6 +43,17 @@ export default function FiltersRow({
   const statusRef = useRef<HTMLDivElement>(null)
   const doerRef = useRef<HTMLDivElement>(null)
   const monthRef = useRef<HTMLDivElement>(null)
+
+  // Generate months on client only to avoid hydration mismatch
+  const monthOptions = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      return { monthKey, label }
+    })
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -199,28 +210,22 @@ export default function FiltersRow({
 
           {monthOpen && (
             <div className="absolute top-full mt-2 left-0 w-48 bg-card border border-border rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
-              {Array.from({ length: 12 }, (_, i) => {
-                const date = new Date()
-                date.setMonth(date.getMonth() - i)
-                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-                const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                return (
-                  <button
-                    key={monthKey}
-                    onClick={() => {
-                      onMonthChange(monthKey)
-                      setMonthOpen(false)
-                    }}
-                    className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                      selectedMonth === monthKey
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-foreground hover:bg-secondary'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
+              {monthOptions.map((option) => (
+                <button
+                  key={option.monthKey}
+                  onClick={() => {
+                    onMonthChange(option.monthKey)
+                    setMonthOpen(false)
+                  }}
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                    selectedMonth === option.monthKey
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-secondary'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           )}
         </div>

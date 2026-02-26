@@ -29,12 +29,21 @@ export default function HodProductsPage() {
   const [expandedSectionIds, setExpandedSectionIds] = useState<string[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  })
+  const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [doers, setDoers] = useState<string[]>([])
   const [printDateTime, setPrintDateTime] = useState('')
+
+  // Set initial month on client side only to avoid hydration mismatch
+  useEffect(() => {
+    const now = new Date()
+    setSelectedMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+  }, [])
+
+  // Format month for display - only compute on client side
+  const formattedMonth = useMemo(() => {
+    if (!selectedMonth) return ''
+    return new Date(selectedMonth + '-01').toLocaleString('en-GB', { month: 'long', year: 'numeric' })
+  }, [selectedMonth])
 
   useEffect(() => {
     async function loadTasks() {
@@ -155,7 +164,7 @@ export default function HodProductsPage() {
         {/* Print Header - Only visible during print */}
         <PrintHeader 
           title="Products" 
-          reportMonth={selectedMonth ? new Date(selectedMonth + '-01').toLocaleString('en-GB', { month: 'long', year: 'numeric' }) : undefined} 
+          reportMonth={formattedMonth || undefined} 
         />
 
         {/* Print-only In House Container */}

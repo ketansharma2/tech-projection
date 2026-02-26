@@ -25,10 +25,13 @@ export default function UserDMPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
   const [activeOnly, setActiveOnly] = useState(false)
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+  const [selectedMonth, setSelectedMonth] = useState<string>('')
+
+  // Set initial month on client side only to avoid hydration mismatch
+  useEffect(() => {
     const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  })
+    setSelectedMonth(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+  }, [])
   const [expandedSectionIds, setExpandedSectionIds] = useState<Set<string>>(new Set())
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)

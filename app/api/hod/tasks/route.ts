@@ -28,6 +28,8 @@ interface Task {
   goalTarget: string
   deliveryMode?: string
   progressPercent: number
+  remarks: string
+  links: string
 }
 
 interface DBTask {
@@ -81,6 +83,8 @@ function transformDBTaskToTask(dbTask: DBTask, sn: number, userNameMap: Record<s
     goalTarget: dbTask.goal_target || '—',
     deliveryMode: dbTask.delivery_mode,
     progressPercent: dbTask.progress_percent || 0,
+    remarks: dbTask.remarks || '',
+    links: dbTask.links || '',
   }
 }
 
